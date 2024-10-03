@@ -1,0 +1,93 @@
+baseURL = 'https://example.org/'
+languageCode = 'en-us'
+theme = "PaperMod"
+
+enableRobotsTXT = true
+buildDrafts = false
+buildFuture = false
+buildExpired = false
+
+[minify]
+minifyOutput = true
+
+[params]
+title = 'The dacbd Blog'
+subtitle = 'Technical Writings and Rants'
+socialIcons = [{ name = "github", url = "https://github.com/dacbd" }, { name = "linkedin", url = "https://www.linkedin.com/in/dacbd/" }]
+author = "Daniel Barnes"
+defaultTheme = "auto"
+
+# navigation things
+ShowReadingTime = true
+ShowShareButtons = true
+ShowPostNavLinks = true
+ShowBreadCrumbs = true
+ShowCodeCopyButtons = false
+ShowWordCount = true
+ShowRssButtonInSectionTermList = true
+UseHugoToc = true
+disableSpecial1stPost = false
+disableScrollToTop = false
+comments = false
+hidemeta = false
+hideSummary = false
+showtoc = false
+tocopen = false
+
+[params.contact]
+email = 'dabarnes2b@gmail.com'
+
+[params.homeInfoParams]
+Title = "Hi there \U0001F44B"
+Content = "Welcome to my blog"
+
+[params.profileMode]
+enabled = false # needs to be explicitly set
+title = "ExampleSite"
+subtitle = "This is subtitle"
+imageUrl = "<img location>"
+imageWidth = 120
+imageHeight = 120
+imageTitle = "my image"
+buttons = [{ name = "Posts", url = "posts" }, { name = "Tags", url = "tags" }]
+
+[params.cover]
+hidden = true # hide everywhere but not in structured data
+hiddenInList = true # hide on list pages and home
+hiddenInSingle = true # hide on single page
+
+[params.editPost]
+URL = "https://github.com/dacbd/blog/content"
+Text = "Suggest Changes" # edit text
+appendFilePath = true # to append file path to Edit link
+
+[menus]
+[[menus.main]]
+identifier = "home"
+name = "home"
+url = "/"
+weight = 10
+[[menus.main]]
+identifier = "categories"
+name = "categories"
+url = "/categories/"
+weight = 20
+[[menus.main]]
+identifier = "tags"
+name = "tags"
+url = "/tags/"
+weight = 30
+[[menus.main]]
+identifier = "example"
+name = "example.org"
+url = "https://example.org"
+weight = 100
+# Read: https://github.com/adityatelange/hugo-PaperMod/wiki/FAQs#using-hugos-syntax-highlighter-chroma
+pygmentsUseClasses = true
+[markup.highlight]
+noClasses = false
+# anchorLineNos = true
+# codeFences = true
+# guessSyntax: = true
+# lineNos = true
+# style = monokai
