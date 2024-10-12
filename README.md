@@ -19,3 +19,4 @@ Add a new post:
 
 Development:
 `hugo server` See content at [localhost](http://localhost:1313/)
+`hugo new --kind post contest/posts/<name>.md`

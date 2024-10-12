@@ -1,4 +1,4 @@
-baseURL = 'https://example.org/'
+baseURL = 'https://blog.dacbd.dev/'
 languageCode = 'en-us'
 theme = "PaperMod"
 
@@ -16,13 +16,15 @@ subtitle = 'Technical Writings and Rants'
 socialIcons = [{ name = "github", url = "https://github.com/dacbd" }, { name = "linkedin", url = "https://www.linkedin.com/in/dacbd/" }]
 author = "Daniel Barnes"
 defaultTheme = "auto"
+env = "production"
+mainSections = ["posts", "tags"]
 
 # navigation things
 ShowReadingTime = true
 ShowShareButtons = true
 ShowPostNavLinks = true
 ShowBreadCrumbs = true
-ShowCodeCopyButtons = false
+ShowCodeCopyButtons = true
 ShowWordCount = true
 ShowRssButtonInSectionTermList = true
 UseHugoToc = true
@@ -38,8 +40,18 @@ tocopen = false
 email = 'dabarnes2b@gmail.com'
 
 [params.homeInfoParams]
-Title = "Hi there \U0001F44B"
-Content = "Welcome to my blog"
+Title = "Welcome! \U0001F44B"
+Content = """
+I'm Daniel Barnes, A software engineer who has done it all. I've always had a passion for computers and the internet.
+I got my first start in tech at a local IT security company, where I learned linux the hardway: was given a spare server in the backroom, figured out how to close vim, and then told to migrate some MySQL database to Postgres.
+
+---
+I've professtionally writing code since 2011 when I first got introduced to Nodejs on `v0.4.0` and ever since I've been writing code for the web.
+
+---
+I'm 50% Backend - 30% DevOps - 20% Frontend - 0% Designer
+
+"""
 
 [params.profileMode]
 enabled = false # needs to be explicitly set
@@ -49,7 +61,7 @@ imageUrl = "<img location>"
 imageWidth = 120
 imageHeight = 120
 imageTitle = "my image"
-buttons = [{ name = "Posts", url = "posts" }, { name = "Tags", url = "tags" }]
+#buttons = [{ name = "Posts", url = "posts" }, { name = "Tags", url = "tags" }]
 
 [params.cover]
 hidden = true # hide everywhere but not in structured data
@@ -68,9 +80,9 @@ name = "home"
 url = "/"
 weight = 10
 [[menus.main]]
-identifier = "categories"
-name = "categories"
-url = "/categories/"
+identifier = "posts"
+name = "posts"
+url = "/posts/"
 weight = 20
 [[menus.main]]
 identifier = "tags"
