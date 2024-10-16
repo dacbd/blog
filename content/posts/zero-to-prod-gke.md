@@ -9,7 +9,7 @@ TocOpen: false
 draft: true
 hidemeta: false
 comments: false
-description: "Go from nothing to a comprehenive production style deployment."
+description: "Go from nothing to a basic production deployment."
 canonicalURL: "https://canonical.url/to/page"
 disableHLJS: true # to disable highlightjs
 disableShare: false
@@ -36,22 +36,22 @@ editPost:
 
 # Intro
 
-Our goal is to go from nothing to __Production__ ready deployment in GCP (from the perpective of a small team, a single DevOps member, or your side-project that will totally get some traffic).
+Our goal is to go from nothing to a __basic__ production ready deployment in GCP. (from the perpective of a small team, a single DevOps member, or your side-project that will totally get some traffic).
 
 First off I'm going to use this "production ready" term a little loosely, I think everyone has there own definition of what that means.
 We aren't going in-depth on every detail and depending on your risk tolerance/security posture there may be many more things you should do to be "production ready".
 
-All that said I'm confindent this will get you at least %90 there if not all the way.
+All that said I'm confindent this will get you at least %80 there if not all the way.
 
-I love automation, and things the "just work" so, I have two __meta goals__ of our setup.
+I love automation, and things the "just work" so, I we have two __meta goals__ for our setup.
 
-First, as the title says we are going to go from nothing to deployment, but with the least amount of click ops possible.
-A sub goal of this is, consistent repeatabilty, meaning if something goes wrong we could delete our whole project and start from scratch.
-With a few commands we can be back up and running.
+First, I want our setup to be easily reproducable with the least amount of click ops possible.
+Meaning if something goes wrong we could delete our whole project and start from scratch.
+With as few commands we can be back up and running.
 
 Second, our setup should be as hands off as possible, set it and forget it.
 This is going to inform some of our technology choices, but we arent going full __serverless__ but we don't want to worry patching servers, or configuring HAProxy.
-At the same time we want something, where if a Experienced DevOps Engineer joined the project, no eyebrows would be raised and they could take over responsibilty easily.
+At the same time we want something, where if a Experienced DevOps Engineer joined the project, they could quickly take over managing infra without much effort.
 
 
 We are going cover:
@@ -61,8 +61,6 @@ We are going cover:
 - dns
 - loadbalancing
 - logging
-- metrics
-- and basic security along the way.
 
 # Getting Started
 
