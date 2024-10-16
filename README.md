@@ -18,5 +18,9 @@ Add a new post:
 `hugo new content content/posts/my-new-post.md`
 
 Development:
-`hugo server` See content at [localhost](http://localhost:1313/)
+`hugo server -D` See content at [localhost](http://localhost:1313/)
 `hugo new --kind post contest/posts/<name>.md`
+
+
+Deployment:
+cloudfare pages runs the build on push to main...
