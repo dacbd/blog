@@ -10,7 +10,7 @@ draft: true
 hidemeta: false
 comments: false
 description: "Go from nothing to a basic production deployment."
-canonicalURL: "https://blog.dacbd/posts/zero-to-prod-gke/"
+canonicalURL: "https://blog.dacbd.dev/posts/zero-to-prod-gke/"
 disableHLJS: true # to disable highlightjs
 disableShare: false
 disableHLJS: false
