@@ -2,7 +2,7 @@
 title: 'Zero to Prod - GKE'
 date: 2024-10-07T21:07:42+09:00
 # weight: 1
-tags: ["k8s", "GCP", "GKE", "terraform"]
+tags: ["k8s", "GCP", "GKE", "terraform", "DevOps"]
 author: "Daniel Barnes"
 showToc: true
 TocOpen: false
@@ -36,59 +36,557 @@ editPost:
     appendFilePath: true # to append file path to Edit link
 ---
 
-# Intro
+## Intro
 
 Our goal is to go from nothing to a __basic__ production ready deployment in GCP (from the perpective of a small team, a single DevOps member, or your side-project that will totally get some traffic).
 
-First off I'm going to use this "production ready" term a little loosely, I think everyone has there own definition of what that means.
+I'm going to use the "production ready" term a little loosely, everyone has there own definition of what that means.
 We aren't going in-depth on every detail and depending on your risk tolerance/security posture there may be many more things you should do to be "production ready".
 
-All that said I'm confindent this will get you at least 80% there if not all the way.
+All that said I'm confindent for 80% of projects this will get you 80% there, if not all the way.
 
+All of the code is available here: [https://github.com/dacbd/zero-to-prod-gke]()
+
+## Tech Choices
 I love automation, and things the "just work" so, I we have two __meta goals__ for our setup.
 
 First, I want our setup to be easily reproducable with the least amount of click ops possible.
-Meaning if something goes wrong we could delete our whole project and start from scratch.
-With as few commands we can be back up and running.
-
 Second, our setup should be as hands off as possible, set it and forget it.
-This is going to inform some of our technology choices, but we arent going full __serverless__ but we don't want to worry patching servers, or configuring HAProxy.
-At the same time we want something, where if a Experienced DevOps Engineer joined the project, they could quickly take over managing infra without much effort.
 
 
-We are going cover:
-- basic static infra
-- vpc networking
-- kubernetes
-- dns
-- loadbalancing
-- logging
-
-# Getting Started
+We'll use Terraform to define our static infra.
+GKE autopilot, to run our application.
+Finally GCP's "Cloud Native" solution for Load Balancing, Logging, and Metrics.
 
 
 
-# Terraform
+With this approuch if something goes wrong we could delete our whole project and start from scratch, easily reproducing out exact setup.
+This setup is extremely hands off, we arent going full __serverless__ but we don't want to worry patching servers, or configuring HAProxy.
 
-In the git repo you can see the whole teraform setup together.
+## Getting Started
+
+Make sure we have all of our required cli tools.
+
+[terraform:](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli)
+```bash
+brew tap hashicorp/tap
+brew install hashicorp/tap/terraform
+```
+
+[kubectl:](https://kubernetes.io/docs/tasks/tools/#kubectl)
+```bash
+# Probably best to just use the kubectl provided by docker decktop
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/darwin/arm64/kubectl"
+```
+
+[gcloud:](https://cloud.google.com/sdk/docs/install#installation_instructions)
+```bash
+cd ~/
+wget https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-darwin-arm.tar.gz
+tar xzf ./google-cloud-cli-darwin-arm.tar.gz
+./google-cloud-sdk/install.sh
+# source your bashrc or open a new terminal
+gcloud init
+
+```
+
+[gcloud k8s auth component:](https://cloud.google.com/blog/products/containers-kubernetes/kubectl-auth-changes-in-gke)
+```bash
+gcloud components install gke-gcloud-auth-plugin
+```
+
+-----
+
+Finally if you are working in a new GCP project we need to make sure all the relevant APIs are enabled.
+
+For example:
+- Certificate Manager API `certificatemanager.googleapis.com`
+- Compute Engine API `compute.googleapis.com`
+- Kubernetes Engine API `container.googleapis.com`
+- Cloud DNS API `dns.googleapis.com`
+- Cloud Logging API `logging.googleapis.com`
+- Cloud Monitoring API `monitoring.googleapis.com`
+
+Most of the time you will see an error when you try to create a resource in if you haven't enable it already, but there are a few cases where its not clear.
+
+
+As an example, you can go through this whole tutorial and deployment, and have everything working but not be able to see any of your k8s container logs...
+Really strange right? You can configure all the logging resouces, even browse through other logs (ex: your load balancer) in the Log Explorer. All without actually enabling the logging API for your project. So if you don't see your logs in Log Explorer thats probably why.
+
+You can check what you have enabled with: `gcloud services list --enabled --project <your-project-name>`, there should be many more than are listed above.
+
+
+## Terraform
+
+In the [git repo](https://github.com/dacbd/zero-to-prod-gke/tree/main/terraform) you can see the whole teraform setup together.
 As we progress I will show the relevant parts as they come up.
 
-## Private Network
+First we need to get the boiler plate out of the way, we define the providers with need:
+```hcl
+terraform {
+  required_providers {
+    google = {
+      source  = "hashicorp/google"
+      version = "6.6.0"
+    }
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "~> 4.4"
+    }
+  }
+}
 
-## k8s Cluster
+provider "google" {
+  project = "zero-to-prod-gke"
+  region  = "us-west1"
+}
 
-## LoadBalancer
+provider "cloudflare" {
+  api_token = var.cloudflare_api_token
+}
+```
 
-## Logging
+I'm using cloudflare for dns but its not needed, you can do some copy pasteing of a few values for DNS.
 
-logging is pretty simple with our GKE setup, we don't need to do much.
-No need to setup fluentd, GCP **automagicly** collects our container logs for us.
-We will setup a seperate logging bucket and setup the logging sink.
-After that is complete you can just used GCP Log explorer to inspect your logs.
+If you have sensitive credentials, like `var.cloudflare_api_token` in the above you can use an envirourment variable to set the value so you aren't putting it in a file that might end up in git. 
 
-## Metrics
+terraform with look for enviroument variables with the prefix: `TF_VAR_` and set their value to your variables.
+Using our above example we can run `export TF_VAR_cloudflare_api_token=deadbeef`.
 
-## Misc. Notes on security.
+### Private Network
+
+Networking is often a source of pain, and its important to try and get right the first time.
+If you get it wrong, in the wrong way, it might mean taking down all of your services to fix it.
+
+So we are going to try and keep simple.
+One thing we want to do to help with security, is to keep our network private.
+We will create a Cloud Nat so that servers on the network can call out to external services.
+But we will keep it so the only way for traffic to get on the network is through the GCP load balancer.
+
+**NO Public IPs in our Network!**
+
+Note that you can still get a shell on a k8s pod through the control plane, the ultra paranoid will setup a VPN on the network and configure the controal plane to only be accesible through the private network. I plan to write about that at some point...
+
+On the Cloud Providers I use the most AWS/GCP setting up a network can be a bit tedius if you do it by hand, so I recommend using a premade terraform module to handle it. [AWS](https://github.com/terraform-aws-modules/terraform-aws-vpc)/[GCP](https://github.com/terraform-google-modules/terraform-google-network)
+
+
+Without diving into networking, here is a quick note on cidr and subnets.
+1. Just use the typical private `10.0.0.0/8`/`10.x.x.x` address space. `192.168.0.0/16` is what most peoples home networks use, `172.16.0.0/12` is what docker's networking typically uses. So this just avoids any confusion.
+2. Just because you are using `10.0.0.0/8` style private network doesnt mean you should use big subnets.
+3. Stick to `10.x.0.0/16` it should be more than enough and gives you plenty of space and you can still add a bunch of subnets.
+4. If you need bigger subnets then you probably now what you are doing already...
+
+Some other subnet chunks you can use:
+- `10.x.x.0/24`
+- `10.x.0.0/18`, `10.x.64.0/18`, `10.x.128.0/18`, and `10.x.192.0/18`
+The latter we will use in our example below.
+
+
+#### locals
+```hcl
+locals {
+  cluster_type           = "production-gke-autopilot"
+  network_name           = "production"
+  subnet_name            = "k8s-private-subnet"
+  master_auth_subnetwork = "k8s-private-master-subnet"
+  pods_range_name        = "ip-range-pods-private"
+  svc_range_name         = "ip-range-svc-private"
+  subnet_names           = [for subnet_self_link in module.prod-vpc.subnets_self_links : split("/", subnet_self_link)[length(split("/", subnet_self_link)) - 1]]
+}
+```
+
+#### vpc
+```hcl
+module "prod-vpc" {
+  source  = "terraform-google-modules/network/google"
+  version = ">= 7.5"
+
+  project_id   = var.project_id
+  network_name = local.network_name
+
+  subnets = [
+    {
+      subnet_name           = local.subnet_name
+      subnet_ip             = "10.1.0.0/16"
+      subnet_region         = var.region
+      subnet_private_access = true
+    },
+    {
+      subnet_name   = local.master_auth_subnetwork
+      subnet_ip     = "10.2.0.0/16"
+      subnet_region = var.region
+    },
+  ]
+
+  secondary_ranges = {
+    (local.subnet_name) = [
+      {
+        range_name    = local.pods_range_name
+        ip_cidr_range = "10.3.0.0/18"
+      },
+      {
+        range_name    = local.svc_range_name
+        ip_cidr_range = "10.3.64.0/18"
+      },
+    ]
+  }
+}
+
+```
+
+#### Cloud Nat
+We want to reach out to greater internet from our  private cluster so we need a [Cloud Nat](https://cloud.google.com/nat/docs/gke-example)
+```hcl
+resource "google_compute_router" "router" {
+  name    = "nat-router"
+  network = module.prod-vpc.network_name
+  region  = var.region
+}
+
+resource "google_compute_router_nat" "nat" {
+  name                               = "nat"
+  router                             = google_compute_router.router.name
+  region                             = google_compute_router.router.region
+  nat_ip_allocate_option             = "AUTO_ONLY"
+  source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
+
+  log_config {
+    enable = true
+    filter = "ERRORS_ONLY"
+  }
+}
+```
+
+### K8s Cluster
+One option for creating the k8s cluster would be to use another [terraform module](https://github.com/terraform-google-modules/terraform-google-kubernetes-engine) like we did for networking, so take a look at their examples and see if one makes what you are going for.
+
+Here I have crafted an Autopilot cluster that matches what is created if you click though the web console to create a private cluster.
+
+<details><summary>The terraform definition is a bit long so click to expand.</summary>
+
+```hcl
+resource "google_container_cluster" "primary" {
+  name              = "${local.cluster_type}-cluster"
+  project           = var.project_id
+  location          = var.region
+  datapath_provider = "ADVANCED_DATAPATH"
+
+  network         = "projects/${var.project_id}/global/networks/${module.prod-vpc.network_name}"
+  networking_mode = "VPC_NATIVE"
+  subnetwork      = "projects/${var.project_id}/regions/${var.region}/subnetworks/${local.subnet_names[index(module.prod-vpc.subnets_names, local.subnet_name)]}"
+  ip_allocation_policy {
+    cluster_secondary_range_name  = local.pods_range_name
+    services_secondary_range_name = local.svc_range_name
+    stack_type                    = "IPV4"
+    pod_cidr_overprovision_config {
+      disabled = false
+    }
+  }
+
+  deletion_protection = false
+  enable_autopilot    = true
+
+  enable_cilium_clusterwide_network_policy = false
+  enable_kubernetes_alpha                  = false
+  enable_l4_ilb_subsetting                 = false
+  enable_legacy_abac                       = false
+  enable_multi_networking                  = false
+  enable_tpu                               = false
+
+
+  addons_config {
+    gce_persistent_disk_csi_driver_config {
+      enabled = true
+    }
+    gcp_filestore_csi_driver_config {
+      enabled = true
+    }
+    gcs_fuse_csi_driver_config {
+      enabled = true
+    }
+    horizontal_pod_autoscaling {
+      disabled = false
+    }
+    http_load_balancing {
+      disabled = false
+    }
+    ray_operator_config {
+      enabled = false
+    }
+  }
+  binary_authorization {
+    evaluation_mode = "DISABLED"
+  }
+
+  cluster_autoscaling {
+    auto_provisioning_locations = []
+    autoscaling_profile         = "OPTIMIZE_UTILIZATION"
+
+    auto_provisioning_defaults {
+      image_type = "COS_CONTAINERD"
+      oauth_scopes = [
+        "https://www.googleapis.com/auth/devstorage.read_only",
+        "https://www.googleapis.com/auth/logging.write",
+        "https://www.googleapis.com/auth/monitoring",
+        "https://www.googleapis.com/auth/service.management.readonly",
+        "https://www.googleapis.com/auth/servicecontrol",
+        "https://www.googleapis.com/auth/trace.append",
+      ]
+      service_account = "default"
+
+      management {
+        auto_repair  = true
+        auto_upgrade = true
+      }
+    }
+  }
+
+  default_snat_status {
+    disabled = false
+  }
+  dns_config {
+    cluster_dns        = "CLOUD_DNS"
+    cluster_dns_domain = "cluster.local"
+    cluster_dns_scope  = "CLUSTER_SCOPE"
+  }
+  gateway_api_config {
+    channel = "CHANNEL_STANDARD"
+  }
+  logging_config {
+    enable_components = [
+      "SYSTEM_COMPONENTS",
+      "WORKLOADS",
+    ]
+  }
+
+  monitoring_config {
+    enable_components = [
+      "SYSTEM_COMPONENTS",
+      "STORAGE",
+      "POD",
+      "DEPLOYMENT",
+      "STATEFULSET",
+      "DAEMONSET",
+      "HPA",
+      "CADVISOR",
+      "KUBELET",
+    ]
+    advanced_datapath_observability_config {
+      enable_metrics = true
+      enable_relay   = false
+    }
+    managed_prometheus {
+      enabled = true
+    }
+  }
+
+  node_pool_defaults {
+    node_config_defaults {
+      insecure_kubelet_readonly_port_enabled = "FALSE"
+      logging_variant                        = "DEFAULT"
+      gcfs_config {
+        enabled = true
+      }
+    }
+  }
+  private_cluster_config {
+    enable_private_endpoint = false
+    enable_private_nodes    = true
+    master_global_access_config {
+      enabled = false
+    }
+  }
+  release_channel {
+    channel = "REGULAR"
+  }
+  secret_manager_config {
+    enabled = false
+  }
+  security_posture_config {
+    mode               = "BASIC"
+    vulnerability_mode = "VULNERABILITY_DISABLED"
+  }
+  vertical_pod_autoscaling {
+    enabled = true
+  }
+  workload_identity_config {
+    workload_pool = "${var.project_id}.svc.id.goog"
+  }
+}
+```
+
+</details>
+
+### LoadBalancer
+GKE Clusters come pre-setup to handle several Custom Resources which allow you to define certain parts of our infra with `kubectl` Our load balancer is an example of that.
+We will go over part of it later with k8s manifests.
+There are a few more static elements we need to define first through terraform, like DNS and some basic security rules.
+
+#### LB SSL policy
+Our LB is going to terminate ssl for us and we can configure which TLS versions are allowed, nothing special here:
+```hcl
+resource "google_compute_ssl_policy" "prod-ssl-policy" {
+  name    = "production-ssl-policy"
+  profile = "MODERN"
+}
+```
+
+#### Static IP assgined to our LB
+We will use a static IP address for our load balancer, we will also use this when we setup our DNS records
+```hcl
+resource "google_compute_global_address" "static" {
+  name         = "prod-lb-address"
+  description  = "static IP address for whoami.dacbd.dev"
+  address_type = "EXTERNAL"
+}
+```
+
+#### A DNS "Authorization"
+This is used later when we provision an SSL cert for our ingress resource/LB later in the kubectl manifests.
+It essentially proves to GCP that we do own the domain. (make sure you add your own domain here)
+```hcl
+resource "google_certificate_manager_dns_authorization" "default" {
+  name        = "whoami-dacbd-dev-dns-auth"
+  location    = "global"
+  description = "The default dns"
+  domain      = "whoami.dacbd.dev"
+}
+```
+
+#### Your DNS records
+We have two DNS records to set, one for our future LB's IP address, and another for the DNS authorization from above.
+You can easily copy paste these values into the records yourself, defining some outputs to print to your screen after you run apply:
+```hcl
+output "k8s_ingress_lb_global_static_ip" {
+  value = google_compute_global_address.static.name
+}
+output "dns_record_domain_name" {
+  value = google_certificate_manager_dns_authorization.default.dns_resource_record.0.name
+}
+output "dns_record_type" {
+  value = google_certificate_manager_dns_authorization.default.dns_resource_record.0.type
+}
+output "dns_record_value" {
+  value = google_certificate_manager_dns_authorization.default.dns_resource_record.0.data
+}
+```
+
+You can also just define these with terraform too, I'm using cloudflare so it looks like this:
+```hcl
+resource "cloudflare_record" "load-balancer-entry" {
+  zone_id = var.cloudflare_zone_id
+  name    = "whoami.dacbd.dev"
+  content = google_compute_global_address.static.address
+  type    = "A"
+  ttl     = 1 # automatic
+}
+resource "cloudflare_record" "gcp-dns-authorization-entry" {
+  zone_id = var.cloudflare_zone_id
+  name    = google_certificate_manager_dns_authorization.default.dns_resource_record.0.name
+  content = google_certificate_manager_dns_authorization.default.dns_resource_record.0.data
+  type    = google_certificate_manager_dns_authorization.default.dns_resource_record.0.type
+  ttl     = 1 # automatic
+}
+```
+
+#### Some basic Load Balancer security
+GCP's rules can be pretty expressive so its certinly worth reading their docs, or clicking around their wizard for manually adding rules.
+
+Here I'd show some baseline rules, blocking countries and rate limiting.
+
+You can define the rules together with the basic policy as a single resource, but I recomend keeping them seperate.
+```hcl
+resource "google_compute_security_policy" "default" {
+  name        = "basic-policy"
+  description = "basic global security policy"
+  type        = "CLOUD_ARMOR"
+}
+```
+
+Next our country block, example: you might not want to business with sanctioned countries.
+Lets block Iran and North Korea. As an additional consideration for the more paranoid you will want to track blocks which contain your auth header, A bad actor who is normally using a VPN might forget every now and then.
+```hcl
+resource "google_compute_security_policy_rule" "block_country" {
+  security_policy = google_compute_security_policy.default.name
+  priority        = "1000"
+  action          = "deny(403)"
+  match {
+    expr {
+      expression = "origin.region_code == \"IR\" || origin.region_code == \"KP\""
+    }
+  }
+}
+```
+
+Finally we want some basic protection against DDOS on our app, this isn't the end-all-be-all of DDOS protection and its not a subsitiute for rate-limiting on your API. Your app level rate-limiting you can have more control over fine tuning. Anyway lets establish a blanket level of protection.
+```hcl
+resource "google_compute_security_policy_rule" "rate_limit" {
+  security_policy = google_compute_security_policy.default.name
+  priority        = "2000"
+  action          = "rate_based_ban"
+  match {
+    versioned_expr = "SRC_IPS_V1"
+    config {
+      src_ip_ranges = ["*"]
+    }
+  }
+  rate_limit_options {
+    conform_action = "allow"
+    exceed_action  = "deny(429)"
+    rate_limit_threshold {
+      count        = 120
+      interval_sec = 60
+    }
+    ban_duration_sec = 3600 # ban for an hour
+  }
+}
+```
+
+### Logging
+
+Logging is pretty simple with our GKE setup, we don't need to do much.
+No need to setup something like a fluentd DeamonSet, GCP **automagicly** collects our container logs for us.
+We just need to create a seperate logging bucket and setup the logging sink (to that bucket).
+After that is complete you can just use GCP Log explorer to inspect and query your logs.
+
+First we will create a random `bucket_prefix` destroying s3 type buckets is not an action the is completed imediately. If you are testing things running `terraform apply` and `terraform destroy` more than once you can get name conflicts.
+```hcl
+resource "random_string" "bucket_prefix" {
+  length  = 6
+  special = false
+  upper   = false
+}
+```
+
+Next we create our special logging bucket (different from a normal cloud storage bucket).
+```hcl
+resource "google_logging_project_bucket_config" "k8s-logs" {
+  project          = var.project_id
+  location         = var.region
+  retention_days   = 21
+  enable_analytics = true
+  bucket_id        = "${random_string.bucket_prefix.result}-${google_container_cluster.primary.name}-logs"
+}
+```
+
+Finally we create our logging sink, defining what logs we want and where they should go.
+We are going to include an exclusion to help keep are total log volume down, you can remove it if decide you want to keep log from the `kube-system` namespace. 
+```hcl
+resource "google_logging_project_sink" "k8s-sink" {
+  name        = "${google_container_cluster.primary.name}-logs-sink"
+  destination = "logging.googleapis.com/projects/${var.project_id}/locations/${var.region}/buckets/${google_logging_project_bucket_config.k8s-logs.bucket_id}"
+
+  filter = <<-EOF
+resource.type="k8s_container"
+logName=("projects/${var.project_id}/logs/stderr" OR "projects/${var.project_id}/logs/stdout")
+EOF
+
+  exclusions {
+    name   = "remove-kube-system"
+    filter = "resource.labels.namespace_name=\"kube-system\""
+  }
+}
+```
 
 
 

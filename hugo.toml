@@ -36,6 +36,10 @@ hideSummary = false
 showtoc = false
 tocopen = false
 
+[markup.goldmark.renderer]
+unsafe = true
+
+
 [params.contact]
 email = 'dabarnes2b@gmail.com'
 
