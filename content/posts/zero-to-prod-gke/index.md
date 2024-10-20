@@ -588,9 +588,107 @@ EOF
 }
 ```
 
+## Kubernetes manifests for GKE
 
+### Deployment
+Our Deployment yml is pretty simple...
+```yml
+```
+To discuss further I've included the usage of GKE Autopilot's version of Spot instances, which can give you a pretty solid discounts.
+You will want to make sure you have something to setup to handle when when these Spot instances aren't available though.
 
+### Service
+For our service config we have two additional required annotations for our setup.
 
+```yml
+
+```
+
+### Ingress
+In our example we are going to define a few resources in our `ingress.yml` theses could easily be seperate but they are pretty tightly coupled and in are example pretty short so we will keep them together.
+
+#### FrontendConfig
+`FrontendConfig`'s help define the "entrypoint" to our load balancer, here we put the name of our SSL Policy we defined in terraform.
+We also add the entries so that we can redirect any http to https. Its pretty simple, enabled or not, and what type of redirect status we want to use.
+I think its worth noting that if you are discussing your infra with someone besure to establish context, a "Frontend Config" might mean something very different to a web dev.
+```yml
+apiVersion: networking.gke.io/v1beta1
+kind: FrontendConfig
+metadata:
+  name: frontend-config
+spec:
+  sslPolicy: production-ssl-policy
+  redirectToHttps:
+    enabled: true
+    responseCodeName: MOVED_PERMANENTLY_DEFAULT
+```
+
+#### BackendConfig
+`BackendConfig`s can be thought of as a target group, where should your load balancer route requests to. Here I have defined it in my ingress yaml, but likely you have a `BackendConfig` for every `Service` you have defined (assuming all of your services have routes that will get exposed).
+Our `BackendConfig` is also where we attach our security policy(LB level rate-limiting/blocking) we made in terraform.
+For a more holistic example we have redefined the `healthCheck` by default it makes requests to `/` of the `Service` attached to the `BackendConfig`.
+The load balancer uses this to know which pods are healthy to route requests to.
+```yml
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: whoami-backend-config
+spec:
+  securityPolicy:
+    name: basic-policy
+  healthCheck:
+    checkIntervalSec: 15
+    timeoutSec: 2
+    healthyThreshold: 1
+    unhealthyThreshold: 3
+    requestPath: /health
+```
+#### ManagedCertificate
+Next our `ManagedCertificate` IMO the less I have to do to handle SSL the better, so I've opted for [GCP's managed certs](https://cloud.google.com/load-balancing/docs/ssl-certificates/google-managed-certs).
+If you have done all the DNS leg work in our terraform from earlier this should just work.
+From my testing, it seems to take about 5-10 minutes.
+If your [provisioning has failed](https://cloud.google.com/load-balancing/docs/ssl-certificates/troubleshooting#certificate-managed-status) the most common reason is probably going to be `FAILED_NOT_VISIBLE` at which point you should check your k8s yaml and your dns records for any typos.
+```yml
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: managed-cert
+spec:
+  domains:
+    - whoami.dacbd.dev
+```
+#### Ingress
+In our example the [ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/) definition is what ties everything together. The [spec is pretty standard](https://kubernetes.io/docs/reference/kubernetes-api/service-resources/ingress-v1/) so we wont cover it.
+To walk through the annotations:
+1. `kubernetes.io/ingress.class` tells 
+```yml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: whoami-dacbd-dev
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+    kubernetes.io/ingress.global-static-ip-name: prod-lb-address
+    networking.gke.io/managed-certificates: managed-cert
+    networking.gke.io/v1beta1.FrontendConfig: "frontend-config"
+spec:
+  defaultBackend:
+    service:
+      name: whoami
+      port:
+        number: 80
+  rules:
+    - host: whoami.dacbd.dev
+      http:
+        paths:
+          - pathType: Prefix
+            path: "/"
+            backend:
+              service:
+                name: whoami
+                port:
+                  number: 80
+```
 
 
 
