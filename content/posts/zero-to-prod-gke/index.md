@@ -38,20 +38,20 @@ editPost:
 
 ## Intro
 
-Our goal is to go from nothing to a __basic__ production-ready deployment in GCP (from the perspective of a small team, a single DevOps member, or your side project that will totally get some traffic).
+Our goal is to go from nothing to a __basic__ production-ready deployment in GCP (from the perspective of a small team, Solo DevOps, or your side project that will totally get some traffic).
 
 I'm going to use the "production ready" term a little loosely, everyone has their definition of what that means.
 We aren't going in-depth on every detail and depending on your risk tolerance/security posture there may be many more things you should do to be "production-ready".
 
-That said, I'm confident for 80% of projects this will get you 80% there, if not all the way.
+That said, I'm confident for 80% of projects this will get you all the way there, if not then at least 80% of the way.
 
 All of the code is available here: [https://github.com/dacbd/zero-to-prod-gke]()
 
 ## Tech Choices
 I love automation and things that "just work" so, I have two __meta goals__ for our setup.
 
-First, I want our setup to be easily reproducible with the least amount of click ops possible.
-Second, our setup should be as hands-off as possible, set it and forget it.
+First, I want it to be easily reproducible with the least amount of click ops possible.
+Second, it should be as hands-off as possible, set it and forget it.
 
 
 We'll use Terraform to define our static infra.
@@ -59,9 +59,8 @@ GKE autopilot, to run our application.
 Finally GCP's "Cloud Native" solution for Load Balancing, Logging, and Metrics.
 
 
-
-With this approach, if something goes wrong we could delete our whole project and start from scratch, easily reproducing our exact setup.
-Additionally, it should be hands off, we aren't going full __serverless__ but we don't want to worry about patching servers, or configuring HAProxy.
+With this approach, if something goes wrong we can delete our whole project and start from scratch, easily reproducing our exact setup.
+Additionally, it should be hands off, we aren't going full *serverless*, but we don't want to worry about patching servers, or configuring [HAProxy](https://docs.haproxy.org/3.0/configuration.html).
 
 ## Getting Started
 
@@ -151,28 +150,28 @@ Instead you can do some copy-pasting of a few values to set your DNS records.
 
 If you have sensitive credentials, like `var.cloudflare_api_token` in the above you can use an environment variable to set the value so you aren't putting it in a file that might end up in git. 
 
-terraform with look for enviroument variables with the prefix: `TF_VAR_` and set their value to your variables.
+Terraform with look for enviroument variables with the prefix: `TF_VAR_` and set their values to your variables.
 Using our above example we can run `export TF_VAR_cloudflare_api_token=deadbeef`.
 
-### Private Network
+### Networking
 
 Networking is often a source of pain, and it's important to try and get it right the first time.
 If you get it wrong, in the wrong way, it might mean taking down all of your services to fix it.
 
-So we are going to try and keep simple.
-To help with security we will keep our network private.
-For our app to call out to external services, we'll create a [Cloud Nat]().
-However, our setup is created so the only way traffic can get onto our network is through the GCP load balancer. SO...
+So we are going to try and keep it simple.
+To help with security, we will keep our network private.
+For our app to call out to external services, we'll create a [Cloud Nat](https://cloud.google.com/nat/docs/overview).
+The only way traffic can get onto our network will be through the GCP load balancer. SO...
 
 **NO Public IPs in our Network!**
 
 Note that you can still get a shell on a k8s pod through the control plane, the ultra paranoid will set up a VPN on the network and configure the controal plane to only be accesible through the private network. I plan to write about that at some point...
 
-On the Cloud Providers I use the most AWS/GCP setting up a network can be a bit tedious if you do it by hand, so I recommend using a premade terraform module to handle it. [AWS](https://github.com/terraform-aws-modules/terraform-aws-vpc)/[GCP](https://github.com/terraform-google-modules/terraform-google-network)
+On the Cloud Providers I use the most (AWS/GCP) setting up a network can be a bit tedious if you do it by hand, so I recommend using a premade terraform module to handle it: [AWS](https://github.com/terraform-aws-modules/terraform-aws-vpc)/[GCP](https://github.com/terraform-google-modules/terraform-google-network).
 
 
-Without diving into networking, here is a quick note on cidr and subnets.
-1. Just use the typical private `10.0.0.0/8`/`10.x.x.x` address space. `192.168.0.0/16` is what most people's home networks use, `172.16.0.0/12` is what docker's networking typically uses. So this just avoids any confusion.
+Without diving into a networking 101 class, here is some quick notes on cidr and subnets.
+1. Just use the typical large private `10.0.0.0/8`/`10.x.x.x` address space. `192.168.0.0/16` is what most people's home networks use, `172.16.0.0/12` is what docker's networking typically uses. So this just avoids any confusion.
 2. Just because you are using `10.0.0.0/8` style private network doesnt mean you should use big subnets.
 3. Stick to `10.x.0.0/16` it should be more than enough IPs and gives you plenty of space to add a bunch of subnets.
 4. If you need bigger subnets then you probably know what you are doing already...
