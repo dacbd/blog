@@ -179,6 +179,7 @@ Without diving into networking, here is a quick note on cidr and subnets.
 Some other subnet chunks you can use:
 - `10.x.x.0/24`
 - `10.x.0.0/18`, `10.x.64.0/18`, `10.x.128.0/18`, and `10.x.192.0/18`
+
 The latter we will use in our example below.
 
 
@@ -418,7 +419,8 @@ resource "google_container_cluster" "primary" {
 </details>
 
 ### LoadBalancer
-GKE Clusters come pre-setup to handle several Custom Resources which allow you to define certain parts of our infra with `kubectl` Our load balancer is an example of that.
+GKE Clusters come pre-setup to handle several Custom Resources which allow you to define certain parts of our infra with `kubectl`.
+Our load balancer is an example of that.
 We will go over part of it later with k8s manifests.
 There are a few more static elements we need to define first through terraform, like DNS and some basic security rules.
 
@@ -504,7 +506,9 @@ resource "google_compute_security_policy" "default" {
 ```
 
 Next our country block, example: you might not want to business with sanctioned countries.
-Lets block Iran and North Korea. As an additional consideration for the more paranoid you will want to track blocks which contain your auth header, A bad actor who is normally using a VPN might forget every now and then.
+Lets block Iran and North Korea. 
+
+An additional consideration for the more paranoid you will want to track blocks which contain your auth header, A bad actor who is normally using a VPN might forget every now and then.
 ```hcl
 resource "google_compute_security_policy_rule" "block_country" {
   security_policy = google_compute_security_policy.default.name
@@ -518,7 +522,12 @@ resource "google_compute_security_policy_rule" "block_country" {
 }
 ```
 
-Finally we want some basic protection against DDOS on our app, this isn't the end-all-be-all of DDOS protection and its not a subsitiute for rate-limiting on your API. Your app level rate-limiting you can have more control over fine tuning. Anyway lets establish a blanket level of protection.
+Finally we want some basic protection against DDOS on our app.
+
+Note:
+- This isn't the end-all-be-all of DDOS protection.
+- Its not a subsitiute for rate-limiting being built into your app. 
+- Your app level rate-limiting you can have more control and fine tuning.
 ```hcl
 resource "google_compute_security_policy_rule" "rate_limit" {
   security_policy = google_compute_security_policy.default.name
@@ -589,23 +598,83 @@ EOF
 ```
 
 ## Kubernetes manifests for GKE
+Now we will go over the basic definitions of resource to used everything we have setup from above.
 
 ### Deployment
-Our Deployment yml is pretty simple...
+Our Deployment yml is nothing special...
 ```yml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: whoami
+  labels:
+    app: whoami
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: whoami
+  template:
+    metadata:
+      labels:
+        app: whoami
+    spec:
+      nodeSelector:
+        cloud.google.com/gke-spot: "true"
+      containers:
+        - name: whoami
+          image: ghcr.io/dacbd/whoami:latest
+          ports:
+            - containerPort: 3000
+          resources:
+            limits:
+              cpu: 100m
+              memory: 128Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+          livenessProbe:
+            periodSeconds: 10
+            initialDelaySeconds: 5
+            httpGet:
+              path: /health
+              port: 3000
+
 ```
-To discuss further I've included the usage of GKE Autopilot's version of Spot instances, which can give you a pretty solid discounts.
+I've included GKE Autopilot's version of Spot instances, which can give you a pretty solid discounts.
+The simplest form of usage is with the `nodeSelector` like I have here, but you can get some more control with their `affinity` rules.
 You will want to make sure you have something to setup to handle when when these Spot instances aren't available though.
 
+- https://cloud.google.com/kubernetes-engine/docs/how-to/autopilot-spot-pods
+- https://cloud.google.com/kubernetes-engine/pricing#autopilot_mode
+
+
 ### Service
-For our service config we have two additional required annotations for our setup.
+Our service config is nothing special, we have two additional required annotations with our setup.
+1. `cloud.google.com/neg`: in GKE the term `NEG` stands for ["network endpoint group"](https://cloud.google.com/kubernetes-engine/docs/concepts/container-native-load-balancing) if you are fimular with Cloud Load balancers or GCP's version of them, then you know you need to configure some kind of target grouping for the Load Balancer to send traffic to. This annotation creates this for you, targeting your service.  You can read more about [GKE's "Container-Native Load Balancing"](https://cloud.google.com/kubernetes-engine/docs/how-to/container-native-load-balancing#create_service).
+2. `cloud.google.com/backend-config`: Simply connects our `BackendConfig` (covered next) to our service.
 
 ```yml
-
+apiVersion: v1
+kind: Service
+metadata:
+  name: whoami
+  annotations:
+    cloud.google.com/neg: '{"ingress": true}'
+    cloud.google.com/backend-config: '{"default": "whoami-backend-config"}'
+spec:
+  type: ClusterIP
+  selector:
+    app: whoami
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 3000
 ```
 
 ### Ingress
-In our example we are going to define a few resources in our `ingress.yml` theses could easily be seperate but they are pretty tightly coupled and in are example pretty short so we will keep them together.
+In our example we are going to define a few resources in our [`ingress.yml`](https://github.com/dacbd/zero-to-prod-gke/blob/main/kubernetes/ingress.yml) theses could easily be seperate but they are pretty tightly coupled and in are example pretty short so we will keep them together.
 
 #### FrontendConfig
 `FrontendConfig`'s help define the "entrypoint" to our load balancer, here we put the name of our SSL Policy we defined in terraform.
@@ -660,7 +729,10 @@ spec:
 #### Ingress
 In our example the [ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/) definition is what ties everything together. The [spec is pretty standard](https://kubernetes.io/docs/reference/kubernetes-api/service-resources/ingress-v1/) so we wont cover it.
 To walk through the annotations:
-1. `kubernetes.io/ingress.class` tells 
+1. `kubernetes.io/ingress.class` tells k8s which ingress we are going to use, as a counter example you might see the value as `nginx`
+2. `kubernetes.io/ingress.global-static-ip-name` will attach our load balancer to the static IP we provisioned in terraform
+3. `networking.gke.io/managed-certificates` will attach our managed certifiate so we can have proper/easy https for our LB
+4. `networking.gke.io/v1beta1.FrontendConfig` essentially defines the entrypoint for our LB which we [covered above](#FrontendConfig)
 ```yml
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -690,31 +762,5 @@ spec:
                   number: 80
 ```
 
-
-
-terraform basic network
-- essential static infra
-    - vpc
-- GKE definition
-- static ingress elements
-    - static IP
-    - ssl policy
-    - dns authorization
-- dns? 
-
-namecheap / external dns
-- CNAME acme challenge
-- A record to static IP
-
-dns authorization
-- https://cloud.google.com/certificate-manager/docs/dns-authorizations
-
-
-kubernetes setup
-- GKE autopilot
-load balancer / ingress config / ssl policy
-- https://cloud.google.com/kubernetes-engine/docs/how-to/ingress-configuration#create_ingress
-- health checks
-
-
+## Wrap up
 
