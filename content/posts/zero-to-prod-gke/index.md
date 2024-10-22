@@ -38,20 +38,20 @@ editPost:
 
 ## Intro
 
-Our goal is to go from nothing to a __basic__ production ready deployment in GCP (from the perpective of a small team, a single DevOps member, or your side-project that will totally get some traffic).
+Our goal is to go from nothing to a __basic__ production-ready deployment in GCP (from the perspective of a small team, a single DevOps member, or your side project that will totally get some traffic).
 
-I'm going to use the "production ready" term a little loosely, everyone has there own definition of what that means.
-We aren't going in-depth on every detail and depending on your risk tolerance/security posture there may be many more things you should do to be "production ready".
+I'm going to use the "production ready" term a little loosely, everyone has their definition of what that means.
+We aren't going in-depth on every detail and depending on your risk tolerance/security posture there may be many more things you should do to be "production-ready".
 
-All that said I'm confindent for 80% of projects this will get you 80% there, if not all the way.
+That said, I'm confident for 80% of projects this will get you 80% there, if not all the way.
 
 All of the code is available here: [https://github.com/dacbd/zero-to-prod-gke]()
 
 ## Tech Choices
-I love automation, and things the "just work" so, I we have two __meta goals__ for our setup.
+I love automation and things that "just work" so, I have two __meta goals__ for our setup.
 
-First, I want our setup to be easily reproducable with the least amount of click ops possible.
-Second, our setup should be as hands off as possible, set it and forget it.
+First, I want our setup to be easily reproducible with the least amount of click ops possible.
+Second, our setup should be as hands-off as possible, set it and forget it.
 
 
 We'll use Terraform to define our static infra.
@@ -60,12 +60,12 @@ Finally GCP's "Cloud Native" solution for Load Balancing, Logging, and Metrics.
 
 
 
-With this approuch if something goes wrong we could delete our whole project and start from scratch, easily reproducing out exact setup.
-This setup is extremely hands off, we arent going full __serverless__ but we don't want to worry patching servers, or configuring HAProxy.
+With this approach, if something goes wrong we could delete our whole project and start from scratch, easily reproducing our exact setup.
+Additionally, it should be hands off, we aren't going full __serverless__ but we don't want to worry about patching servers, or configuring HAProxy.
 
 ## Getting Started
 
-Make sure we have all of our required cli tools.
+Make sure we have all of our required CLI tools.
 
 [terraform:](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli)
 ```bash
@@ -97,7 +97,7 @@ gcloud components install gke-gcloud-auth-plugin
 
 -----
 
-Finally if you are working in a new GCP project we need to make sure all the relevant APIs are enabled.
+Finally, if you are working in a new GCP project we need to make sure all the relevant APIs are enabled.
 
 For example:
 - Certificate Manager API `certificatemanager.googleapis.com`
@@ -107,21 +107,21 @@ For example:
 - Cloud Logging API `logging.googleapis.com`
 - Cloud Monitoring API `monitoring.googleapis.com`
 
-Most of the time you will see an error when you try to create a resource in if you haven't enable it already, but there are a few cases where its not clear.
+Most of the time you will see an error when you try to create a resource and haven't enabled it already, but there are a few cases where it's not clear.
 
 
 As an example, you can go through this whole tutorial and deployment, and have everything working but not be able to see any of your k8s container logs...
-Really strange right? You can configure all the logging resouces, even browse through other logs (ex: your load balancer) in the Log Explorer. All without actually enabling the logging API for your project. So if you don't see your logs in Log Explorer thats probably why.
+Really strange right? You can configure all the logging resources, and even browse through other logs (ex: your load balancer) in the Log Explorer. All without actually enabling the logging API for your project. So if you don't see your logs in Log Explorer that's probably why.
 
 You can check what you have enabled with: `gcloud services list --enabled --project <your-project-name>`, there should be many more than are listed above.
 
 
 ## Terraform
 
-In the [git repo](https://github.com/dacbd/zero-to-prod-gke/tree/main/terraform) you can see the whole teraform setup together.
+In the [git repo](https://github.com/dacbd/zero-to-prod-gke/tree/main/terraform) you can see the whole terraform setup together.
 As we progress I will show the relevant parts as they come up.
 
-First we need to get the boiler plate out of the way, we define the providers with need:
+First, we need to get the boilerplate out of the way, we define the providers with need:
 ```hcl
 terraform {
   required_providers {
@@ -146,35 +146,36 @@ provider "cloudflare" {
 }
 ```
 
-I'm using cloudflare for dns but its not needed, you can do some copy pasteing of a few values for DNS.
+I'm using cloudflare for DNS but it's not needed.
+Instead you can do some copy-pasting of a few values to set your DNS records.
 
-If you have sensitive credentials, like `var.cloudflare_api_token` in the above you can use an envirourment variable to set the value so you aren't putting it in a file that might end up in git. 
+If you have sensitive credentials, like `var.cloudflare_api_token` in the above you can use an environment variable to set the value so you aren't putting it in a file that might end up in git. 
 
 terraform with look for enviroument variables with the prefix: `TF_VAR_` and set their value to your variables.
 Using our above example we can run `export TF_VAR_cloudflare_api_token=deadbeef`.
 
 ### Private Network
 
-Networking is often a source of pain, and its important to try and get right the first time.
+Networking is often a source of pain, and it's important to try and get it right the first time.
 If you get it wrong, in the wrong way, it might mean taking down all of your services to fix it.
 
 So we are going to try and keep simple.
-One thing we want to do to help with security, is to keep our network private.
-We will create a Cloud Nat so that servers on the network can call out to external services.
-But we will keep it so the only way for traffic to get on the network is through the GCP load balancer.
+To help with security we will keep our network private.
+For our app to call out to external services, we'll create a [Cloud Nat]().
+However, our setup is created so the only way traffic can get onto our network is through the GCP load balancer. SO...
 
 **NO Public IPs in our Network!**
 
-Note that you can still get a shell on a k8s pod through the control plane, the ultra paranoid will setup a VPN on the network and configure the controal plane to only be accesible through the private network. I plan to write about that at some point...
+Note that you can still get a shell on a k8s pod through the control plane, the ultra paranoid will set up a VPN on the network and configure the controal plane to only be accesible through the private network. I plan to write about that at some point...
 
-On the Cloud Providers I use the most AWS/GCP setting up a network can be a bit tedius if you do it by hand, so I recommend using a premade terraform module to handle it. [AWS](https://github.com/terraform-aws-modules/terraform-aws-vpc)/[GCP](https://github.com/terraform-google-modules/terraform-google-network)
+On the Cloud Providers I use the most AWS/GCP setting up a network can be a bit tedious if you do it by hand, so I recommend using a premade terraform module to handle it. [AWS](https://github.com/terraform-aws-modules/terraform-aws-vpc)/[GCP](https://github.com/terraform-google-modules/terraform-google-network)
 
 
 Without diving into networking, here is a quick note on cidr and subnets.
-1. Just use the typical private `10.0.0.0/8`/`10.x.x.x` address space. `192.168.0.0/16` is what most peoples home networks use, `172.16.0.0/12` is what docker's networking typically uses. So this just avoids any confusion.
+1. Just use the typical private `10.0.0.0/8`/`10.x.x.x` address space. `192.168.0.0/16` is what most people's home networks use, `172.16.0.0/12` is what docker's networking typically uses. So this just avoids any confusion.
 2. Just because you are using `10.0.0.0/8` style private network doesnt mean you should use big subnets.
-3. Stick to `10.x.0.0/16` it should be more than enough and gives you plenty of space and you can still add a bunch of subnets.
-4. If you need bigger subnets then you probably now what you are doing already...
+3. Stick to `10.x.0.0/16` it should be more than enough IPs and gives you plenty of space to add a bunch of subnets.
+4. If you need bigger subnets then you probably know what you are doing already...
 
 Some other subnet chunks you can use:
 - `10.x.x.0/24`
@@ -261,7 +262,7 @@ resource "google_compute_router_nat" "nat" {
 ### K8s Cluster
 One option for creating the k8s cluster would be to use another [terraform module](https://github.com/terraform-google-modules/terraform-google-kubernetes-engine) like we did for networking, so take a look at their examples and see if one makes what you are going for.
 
-Here I have crafted an Autopilot cluster that matches what is created if you click though the web console to create a private cluster.
+Here I have crafted an Autopilot cluster that matches what is created if you click through the web console to create a private cluster.
 
 <details><summary>The terraform definition is a bit long so click to expand.</summary>
 
@@ -425,7 +426,7 @@ We will go over part of it later with k8s manifests.
 There are a few more static elements we need to define first through terraform, like DNS and some basic security rules.
 
 #### LB SSL policy
-Our LB is going to terminate ssl for us and we can configure which TLS versions are allowed, nothing special here:
+Our LB is going to terminate SSL for us and we can configure which TLS versions are allowed, nothing special here:
 ```hcl
 resource "google_compute_ssl_policy" "prod-ssl-policy" {
   name    = "production-ssl-policy"
@@ -433,8 +434,8 @@ resource "google_compute_ssl_policy" "prod-ssl-policy" {
 }
 ```
 
-#### Static IP assgined to our LB
-We will use a static IP address for our load balancer, we will also use this when we setup our DNS records
+#### Static IP assigned to our LB
+We will use a static IP address for our load balancer, we will also use this when we set up our DNS records.
 ```hcl
 resource "google_compute_global_address" "static" {
   name         = "prod-lb-address"
@@ -457,7 +458,7 @@ resource "google_certificate_manager_dns_authorization" "default" {
 
 #### Your DNS records
 We have two DNS records to set, one for our future LB's IP address, and another for the DNS authorization from above.
-You can easily copy paste these values into the records yourself, defining some outputs to print to your screen after you run apply:
+You can easily copy and paste these values into the records yourself, defining some outputs to print to your screen after you run apply:
 ```hcl
 output "k8s_ingress_lb_global_static_ip" {
   value = google_compute_global_address.static.name
@@ -473,7 +474,7 @@ output "dns_record_value" {
 }
 ```
 
-You can also just define these with terraform too, I'm using cloudflare so it looks like this:
+You can also just define these with terraform too, I'm using Cloudflare so it looks like this:
 ```hcl
 resource "cloudflare_record" "load-balancer-entry" {
   zone_id = var.cloudflare_zone_id
@@ -496,7 +497,7 @@ GCP's rules can be pretty expressive so its certinly worth reading their docs, o
 
 Here I'd show some baseline rules, blocking countries and rate limiting.
 
-You can define the rules together with the basic policy as a single resource, but I recomend keeping them seperate.
+You can define the rules together with the basic policy as a single resource, but I recommend keeping them seperate.
 ```hcl
 resource "google_compute_security_policy" "default" {
   name        = "basic-policy"
@@ -505,10 +506,11 @@ resource "google_compute_security_policy" "default" {
 }
 ```
 
-Next our country block, example: you might not want to business with sanctioned countries.
-Lets block Iran and North Korea. 
+Next our country block. 
+Let's block Iran and North Korea. 
+To elaborate the example, you might not want to do business with sanctioned countries.
 
-An additional consideration for the more paranoid you will want to track blocks which contain your auth header, A bad actor who is normally using a VPN might forget every now and then.
+An additional consideration for the more paranoid is to track blocks that contain your auth header, A bad actor who is normally using a VPN might forget now and then.
 ```hcl
 resource "google_compute_security_policy_rule" "block_country" {
   security_policy = google_compute_security_policy.default.name
@@ -522,12 +524,12 @@ resource "google_compute_security_policy_rule" "block_country" {
 }
 ```
 
-Finally we want some basic protection against DDOS on our app.
+Finally, we want some basic protection against DDOS on our app.
 
 Note:
 - This isn't the end-all-be-all of DDOS protection.
-- Its not a subsitiute for rate-limiting being built into your app. 
-- Your app level rate-limiting you can have more control and fine tuning.
+- It's not a substitute for rate-limiting being built into your app. 
+- Your app level rate-limiting you can have more control and fine-tuning.
 ```hcl
 resource "google_compute_security_policy_rule" "rate_limit" {
   security_policy = google_compute_security_policy.default.name
@@ -555,10 +557,10 @@ resource "google_compute_security_policy_rule" "rate_limit" {
 
 Logging is pretty simple with our GKE setup, we don't need to do much.
 No need to setup something like a fluentd DeamonSet, GCP **automagicly** collects our container logs for us.
-We just need to create a seperate logging bucket and setup the logging sink (to that bucket).
-After that is complete you can just use GCP Log explorer to inspect and query your logs.
+We just need to create a separate logging bucket and set up the logging sink (to that bucket).
+After that is complete you can just use GCP Log Explorer to inspect and query your logs.
 
-First we will create a random `bucket_prefix` destroying s3 type buckets is not an action the is completed imediately. If you are testing things running `terraform apply` and `terraform destroy` more than once you can get name conflicts.
+First, we will create a random `bucket_prefix` destroying s3 type buckets is not an action that is completed immediately. If you are testing things running `terraform apply` and `terraform destroy` more than once you can get name conflicts.
 ```hcl
 resource "random_string" "bucket_prefix" {
   length  = 6
@@ -567,7 +569,7 @@ resource "random_string" "bucket_prefix" {
 }
 ```
 
-Next we create our special logging bucket (different from a normal cloud storage bucket).
+Next, we create our special logging bucket (different from a normal cloud storage bucket).
 ```hcl
 resource "google_logging_project_bucket_config" "k8s-logs" {
   project          = var.project_id
@@ -578,8 +580,8 @@ resource "google_logging_project_bucket_config" "k8s-logs" {
 }
 ```
 
-Finally we create our logging sink, defining what logs we want and where they should go.
-We are going to include an exclusion to help keep are total log volume down, you can remove it if decide you want to keep log from the `kube-system` namespace. 
+Finally, we create our logging sink, defining what logs we want and where they should go.
+We are going to include an exclusion to help keep the total log volume down, you can remove it if you want to keep logs from the `kube-system` namespace. 
 ```hcl
 resource "google_logging_project_sink" "k8s-sink" {
   name        = "${google_container_cluster.primary.name}-logs-sink"
@@ -598,7 +600,7 @@ EOF
 ```
 
 ## Kubernetes manifests for GKE
-Now we will go over the basic definitions of resource to used everything we have setup from above.
+Now we will go over the basic definitions of resources to use everything we set up from above.
 
 ### Deployment
 Our Deployment yml is nothing special...
@@ -641,9 +643,9 @@ spec:
               port: 3000
 
 ```
-I've included GKE Autopilot's version of Spot instances, which can give you a pretty solid discounts.
+I've included GKE Autopilot's version of Spot instances, which can give you a pretty solid discount.
 The simplest form of usage is with the `nodeSelector` like I have here, but you can get some more control with their `affinity` rules.
-You will want to make sure you have something to setup to handle when when these Spot instances aren't available though.
+You will want to make sure you have something to set up to handle when these Spot instances aren't available though.
 
 - https://cloud.google.com/kubernetes-engine/docs/how-to/autopilot-spot-pods
 - https://cloud.google.com/kubernetes-engine/pricing#autopilot_mode
@@ -651,7 +653,7 @@ You will want to make sure you have something to setup to handle when when these
 
 ### Service
 Our service config is nothing special, we have two additional required annotations with our setup.
-1. `cloud.google.com/neg`: in GKE the term `NEG` stands for ["network endpoint group"](https://cloud.google.com/kubernetes-engine/docs/concepts/container-native-load-balancing) if you are fimular with Cloud Load balancers or GCP's version of them, then you know you need to configure some kind of target grouping for the Load Balancer to send traffic to. This annotation creates this for you, targeting your service.  You can read more about [GKE's "Container-Native Load Balancing"](https://cloud.google.com/kubernetes-engine/docs/how-to/container-native-load-balancing#create_service).
+1. `cloud.google.com/neg`: in GKE the term `NEG` stands for ["network endpoint group"](https://cloud.google.com/kubernetes-engine/docs/concepts/container-native-load-balancing) if you are familiar with Cloud Load balancers or GCP's version of them, then you know you need to configure some kind of target grouping for the Load Balancer to send traffic to. This annotation creates this for you, targeting your service.  You can read more about [GKE's "Container-Native Load Balancing"](https://cloud.google.com/kubernetes-engine/docs/how-to/container-native-load-balancing#create_service).
 2. `cloud.google.com/backend-config`: Simply connects our `BackendConfig` (covered next) to our service.
 
 ```yml
@@ -674,12 +676,14 @@ spec:
 ```
 
 ### Ingress
-In our example we are going to define a few resources in our [`ingress.yml`](https://github.com/dacbd/zero-to-prod-gke/blob/main/kubernetes/ingress.yml) theses could easily be seperate but they are pretty tightly coupled and in are example pretty short so we will keep them together.
+In our example we are going to define a few resources in our [`ingress.yml`](https://github.com/dacbd/zero-to-prod-gke/blob/main/kubernetes/ingress.yml) these could easily be seperate but they are pretty tightly coupled and in our example pretty short.
+I'll go over these custom resources, but [when it doubt checkout the docs](https://cloud.google.com/kubernetes-engine/docs/how-to/ingress-configuration#overview)
 
 #### FrontendConfig
-`FrontendConfig`'s help define the "entrypoint" to our load balancer, here we put the name of our SSL Policy we defined in terraform.
-We also add the entries so that we can redirect any http to https. Its pretty simple, enabled or not, and what type of redirect status we want to use.
-I think its worth noting that if you are discussing your infra with someone besure to establish context, a "Frontend Config" might mean something very different to a web dev.
+`FrontendConfig` helps define the "entry point" to our load balancer, here we put the name of our SSL Policy we defined in terraform.
+We also add the entries so that we can redirect any http to https. It's pretty simple, enabled or not, and what type of redirect status we want to use.
+
+NOTE: if you are discussing your infra with someone besure to establish context, a "Frontend Config" might mean something very different to a web dev.
 ```yml
 apiVersion: networking.gke.io/v1beta1
 kind: FrontendConfig
@@ -693,7 +697,7 @@ spec:
 ```
 
 #### BackendConfig
-`BackendConfig`s can be thought of as a target group, where should your load balancer route requests to. Here I have defined it in my ingress yaml, but likely you have a `BackendConfig` for every `Service` you have defined (assuming all of your services have routes that will get exposed).
+The `BackendConfig` can be thought of as a target group, where your load balancer routes requests. Here I have defined it in my ingress yaml, but likely you have a `BackendConfig` for every `Service` you have defined (assuming all of your services have routes that will get exposed).
 Our `BackendConfig` is also where we attach our security policy(LB level rate-limiting/blocking) we made in terraform.
 For a more holistic example we have redefined the `healthCheck` by default it makes requests to `/` of the `Service` attached to the `BackendConfig`.
 The load balancer uses this to know which pods are healthy to route requests to.
@@ -716,7 +720,7 @@ spec:
 Next our `ManagedCertificate` IMO the less I have to do to handle SSL the better, so I've opted for [GCP's managed certs](https://cloud.google.com/load-balancing/docs/ssl-certificates/google-managed-certs).
 If you have done all the DNS leg work in our terraform from earlier this should just work.
 From my testing, it seems to take about 5-10 minutes.
-If your [provisioning has failed](https://cloud.google.com/load-balancing/docs/ssl-certificates/troubleshooting#certificate-managed-status) the most common reason is probably going to be `FAILED_NOT_VISIBLE` at which point you should check your k8s yaml and your dns records for any typos.
+If your [provisioning has failed](https://cloud.google.com/load-balancing/docs/ssl-certificates/troubleshooting#certificate-managed-status) the most common reason is probably going to be `FAILED_NOT_VISIBLE` at which point you should check your k8s yaml and your DNS records for any typos.
 ```yml
 apiVersion: networking.gke.io/v1
 kind: ManagedCertificate
@@ -727,12 +731,12 @@ spec:
     - whoami.dacbd.dev
 ```
 #### Ingress
-In our example the [ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/) definition is what ties everything together. The [spec is pretty standard](https://kubernetes.io/docs/reference/kubernetes-api/service-resources/ingress-v1/) so we wont cover it.
+In our example, the [ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/) definition is what ties everything together. The [spec is pretty standard](https://kubernetes.io/docs/reference/kubernetes-api/service-resources/ingress-v1/) so we won't cover it.
 To walk through the annotations:
-1. `kubernetes.io/ingress.class` tells k8s which ingress we are going to use, as a counter example you might see the value as `nginx`
+1. `kubernetes.io/ingress.class` tells k8s which ingress we are going to use, as a counter-example you might see the value as `nginx`
 2. `kubernetes.io/ingress.global-static-ip-name` will attach our load balancer to the static IP we provisioned in terraform
-3. `networking.gke.io/managed-certificates` will attach our managed certifiate so we can have proper/easy https for our LB
-4. `networking.gke.io/v1beta1.FrontendConfig` essentially defines the entrypoint for our LB which we [covered above](#FrontendConfig)
+3. `networking.gke.io/managed-certificates` will attach our managed certificate so we can have proper/easy https for our LB
+4. `networking.gke.io/v1beta1.FrontendConfig` essentially defines the entry point for our LB which we [covered above](#FrontendConfig)
 ```yml
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -762,5 +766,60 @@ spec:
                   number: 80
 ```
 
-## Wrap up
+## Wrap up and notes
 
+
+### Running the complete project
+
+If you are using the [repo](https://github.com/dacbd/zero-to-prod-gke) as a template and have updated all the variables for your use, then it should be as easy as this:
+```bash
+# from the respective directories
+terraform apply
+gcloud container clusters get-credentials $CLUSTER_NAME --region $REGION --project $PROJECT_ID
+kubectl apply -f .
+```
+
+### Leaving things partially complete
+Try not to leave things haftway applied.
+The biggest item I'll point out is that we provision a public static IP address to attach to the Load Balancer.
+Until you apply the k8s yaml this address is considered detached, and GCP will charge you extra [(x2)](https://cloud.google.com/vpc/network-pricing#ipaddress). In the grand scheme it's not that much, but worth noting for our penny pinchers.
+
+### Deleteing/CLeaning up resources
+
+Since some of the cloud infrastructure(the load balancer) is managed via Kubernetes resources, if you delete the cluster before deleting those resources, you will leave your account with resources that will need manual management.
+
+__SO__ run `kubectl delete -f .` before running `terraform destroy` and be sure to give it some extra time, go make a coffee or take a nice walk.
+
+In addition, the kubectl interface doesn't always provide you with clear insight into what is happening.
+So if you navigate to your GKE cluster object browser to get links to all of the k8s managed resources.
+https://console.cloud.google.com/kubernetes/object/browser
+
+
+#### Example Images
+
+<details><summary>The Object Browser Load Balancer</summary>
+
+![Object Browser](./object_browser_ingress.jpg)
+</details>
+
+<details><summary>Our Ingress Object</summary>
+
+![Ingress Object](./ingress_resource.jpg)
+</details>
+
+<details><summary>Our Load Balancer</summary>
+
+![Load Balancer Details](./load_balancer_details.jpg)
+</details>
+
+
+### Using k8s
+
+If you are using multiple k8s clusters, for any number of reasons, always ensure you are accessing the correct one.
+Run `kubectl config current-context` and make sure that matches what you expect.
+If it's not you can run `kubectl config get-contexts` and then run `kubectl config set current-context <context name you want>`
+You can also prefix all of your commands, for example `kubectl --context docker-desktop apply -f deployment.yml`
+
+
+Finally, I highly recommend using [k9s](https://k9scli.io/topics/install/) for doing anything other than `apply` or `delete`
+It is a great tool, use it. (contexts work the same with k9s to so you can run `k9s --context docker-desktop`)
