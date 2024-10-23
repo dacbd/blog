@@ -797,7 +797,7 @@ Try not to leave things haftway applied.
 The biggest item I'll point out is that we provision a public static IP address to attach to the Load Balancer.
 Until you apply the k8s yaml this address is considered detached, and GCP will charge you extra [(x2)](https://cloud.google.com/vpc/network-pricing#ipaddress). In the grand scheme it's not that much, but worth noting for our penny pinchers.
 
-### Deleteing/CLeaning up resources
+### Deleteing/Cleaning up resources
 
 Since some of the cloud infrastructure(the load balancer) is managed via Kubernetes resources, if you delete the cluster before deleting those resources, you will leave your account with resources that will need manual management.
 
