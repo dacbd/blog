@@ -599,7 +599,21 @@ EOF
 ```
 
 ## Kubernetes manifests for GKE
-Now we will go over the basic definitions of resources to use everything we set up from above.
+Now we'll review the basic definitions of resources to use everything we set up from above.
+
+It's worth noting there are several ways to manage the deployment of your application.
+For my example I'm going to reference the "raw yaml", but you could manage this with the [kubernetes terraform provider](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs).
+
+From my experience, I have yet to work on a project where we managed our app deployments with the Kubernetes provider, and my take would be: only do this if you want to strongly link all of your infra together.
+If you do this approach you will likely want to avoid [CRD's](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/) that create cloud infra for you, that way everything is defined in terraform.
+
+To Give a brief summary, in my opinion: 
+- use Terraform for strong coupling and a single source of truth.
+- use raw yaml to keep things simple when things are simple
+- use [helm](https://helm.sh) for all over cases. 
+
+Finally, note that [ArgoCD](https://argo-cd.readthedocs.io/en/stable/) is the industry standard for git-based k8s automation, and it works best with raw yaml/[kustomize](https://kustomize.io) and helm. Look out for future posts on setting up ArgoCD!
+
 
 ### Deployment
 Our Deployment yml is nothing special...
