@@ -150,7 +150,7 @@ Instead you can do some copy-pasting of a few values to set your DNS records.
 
 If you have sensitive credentials, like `var.cloudflare_api_token` in the above you can use an environment variable to set the value so you aren't putting it in a file that might end up in git. 
 
-Terraform with look for enviroument variables with the prefix: `TF_VAR_` and set their values to your variables.
+Terraform will look for environment variables with the prefix: `TF_VAR_` and set their values to your variables.
 Using our above example we can run `export TF_VAR_cloudflare_api_token=deadbeef`.
 
 ### Networking
