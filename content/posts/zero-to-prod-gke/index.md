@@ -803,6 +803,20 @@ Since some of the cloud infrastructure(the load balancer) is managed via Kuberne
 
 __SO__ run `kubectl delete -f .` before running `terraform destroy` and be sure to give it some extra time, go make a coffee or take a nice walk.
 
+Terraform can help with this footgun if you include a [lifecycle hook](https://developer.hashicorp.com/terraform/language/meta-arguments/lifecycle), you could setup some advanced [precoditions](https://developer.hashicorp.com/terraform/language/meta-arguments/lifecycle#custom-condition-checks) to help but that beyond this tutorial.
+A basic lifecycle hook to help you would be something like this:
+```hcl
+resource "google_container_cluster" "primary" {
+  # ...
+  # ...
+  lifecycle {
+    prevent_destroy = true
+    # ensure all cluster deployments and resources are deleted first
+  }
+}
+```
+
+
 In addition, the kubectl interface doesn't always provide you with clear insight into what is happening.
 So if you navigate to your GKE cluster object browser to get links to all of the k8s managed resources.
 https://console.cloud.google.com/kubernetes/object/browser
