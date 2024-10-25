@@ -1,19 +1,18 @@
 ---
 title: 'Zero to Prod - GKE'
-date: 2024-10-07T21:07:42+09:00
+date: 2024-10-25
 # weight: 1
 tags: ["k8s", "GCP", "GKE", "terraform", "DevOps"]
 author: "Daniel Barnes"
 showToc: true
 TocOpen: false
-draft: true
+draft: false
 hidemeta: false
 comments: false
 description: "Go from nothing to a basic production deployment."
 canonicalURL: "https://blog.dacbd.dev/posts/zero-to-prod-gke/"
-disableHLJS: true # to disable highlightjs
-disableShare: false
 disableHLJS: false
+disableShare: false
 hideSummary: false
 searchHidden: true
 ShowReadingTime: true
