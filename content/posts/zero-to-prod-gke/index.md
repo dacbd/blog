@@ -158,7 +158,7 @@ module "project-services" {
   ]
 }
 ```
-If you get any `SERVICE_DISABLED` type error messages you may need to wait, enabling services in an ["eventually consistent"](https://registry.terraform.io/providers/hashicorp/google/latest/docs/guides/google_project_service#newly-activated-service-errors) process. [Module reference](https://github.com/terraform-google-modules/terraform-google-project-factory/tree/master/modules/project_services)
+If you get any `SERVICE_DISABLED` type error messages you may need to wait, enabling services is an ["eventually consistent"](https://registry.terraform.io/providers/hashicorp/google/latest/docs/guides/google_project_service#newly-activated-service-errors) process. [Module reference](https://github.com/terraform-google-modules/terraform-google-project-factory/tree/master/modules/project_services)
 
 ### Networking
 
