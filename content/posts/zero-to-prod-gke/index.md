@@ -40,10 +40,16 @@ editPost:
 
 Our goal is to go from nothing to a __basic__ production-ready deployment in GCP (from the perspective of a small team, Solo DevOps, or your side project that will totally get some traffic).
 
+If you follow along you'll have a strong base to build and scale your application from.
+We'll have a secure by default setup, ready for easy horizontal scaling.
+We'll have easy to query/search logs to investigate production issues.
+Finally we'll have built-in preformance monitoring for system metrics like ram and cpu usage.
+All with some basic configuration, and zero maintinance required from us.
+
 I'm going to use the "production ready" term a little loosely, everyone has their definition of what that means.
 We aren't going in-depth on every detail and depending on your risk tolerance/security posture there may be many more things you should do to be "production-ready".
 
-That said, I'm confident for 80% of projects this will get you all the way there, if not then at least 80% of the way.
+That said, I'm confident for 80% of early projects this will get you all the way there, if not then at least 80% of the way.
 
 All of the code is available [here](https://github.com/dacbd/zero-to-prod-gke).
 
@@ -788,9 +794,12 @@ spec:
 If you are using the [repo](https://github.com/dacbd/zero-to-prod-gke) as a template and have updated all the variables for your use, then it should be as easy as this:
 ```bash
 # from the respective directories
+terraform init
 terraform apply
 gcloud container clusters get-credentials $CLUSTER_NAME --region $REGION --project $PROJECT_ID
 kubectl apply -f .
+# monitor k8s progress
+k9s
 ```
 
 ### Leaving things partially complete
