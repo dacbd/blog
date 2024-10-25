@@ -139,7 +139,7 @@ Terraform will look for environment variables with the prefix: `TF_VAR_` and set
 Using our above example we can run `export TF_VAR_cloudflare_api_token=deadbeef`.
 
 
-If we are working in a brand new GCP project we will need to enable all the required servies:
+If we are working in a brand new GCP project we will need to enable all the required services:
 ```hcl
 module "project-services" {
   source  = "terraform-google-modules/project-factory/google//modules/project_services"
