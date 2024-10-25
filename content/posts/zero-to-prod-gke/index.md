@@ -42,9 +42,9 @@ Our goal is to go from nothing to a __basic__ production-ready deployment in GCP
 
 If you follow along you'll have a strong base to build and scale your application from.
 We'll have a secure by default setup, ready for easy horizontal scaling.
-We'll have easy to query/search logs to investigate production issues.
-Finally we'll have built-in preformance monitoring for system metrics like ram and cpu usage.
-All with some basic configuration, and zero maintinance required from us.
+We'll have easy-to-query/search logs to investigate production issues.
+Finally, we'll have built-in performance monitoring for system metrics like RAM and CPU usage.
+All with some basic configuration, and zero maintenance required from us.
 
 I'm going to use the "production ready" term a little loosely, everyone has their definition of what that means.
 We aren't going in-depth on every detail and depending on your risk tolerance/security posture there may be many more things you should do to be "production-ready".
@@ -80,7 +80,7 @@ brew install hashicorp/tap/terraform
 
 [kubectl:](https://kubernetes.io/docs/tasks/tools/#kubectl)
 ```bash
-# Probably best to just use the kubectl provided by docker decktop
+# Probably best to use the kubectl provided by docker decktop
 curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/darwin/arm64/kubectl"
 ```
 
@@ -130,8 +130,8 @@ provider "cloudflare" {
 }
 ```
 
-I'm using cloudflare for DNS but it's not needed.
-Instead you can do some copy-pasting of a few values to set your DNS records.
+I'm using cloudflare for DNS but it's not required.
+Instead, you can copy-paste a few values to set your DNS record
 
 If you have sensitive credentials, like `var.cloudflare_api_token` in the above you can use an environment variable to set the value so you aren't putting it in a file that might end up in git. 
 
@@ -452,7 +452,7 @@ resource "google_compute_global_address" "static" {
 
 #### A DNS "Authorization"
 This is used later when we provision an SSL cert for our ingress resource/LB later in the kubectl manifests.
-It essentially proves to GCP that we do own the domain. (make sure you add your own domain here)
+It essentially proves to GCP that we do own the domain. (make sure you add your domain here)
 ```hcl
 resource "google_certificate_manager_dns_authorization" "default" {
   name        = "whoami-dacbd-dev-dns-auth"
@@ -480,7 +480,7 @@ output "dns_record_value" {
 }
 ```
 
-You can also just define these with terraform too, I'm using Cloudflare so it looks like this:
+You can also define these with Terraform too, I'm using Cloudflare so it looks like this:
 ```hcl
 resource "cloudflare_record" "load-balancer-entry" {
   zone_id = var.cloudflare_zone_id
@@ -499,7 +499,7 @@ resource "cloudflare_record" "gcp-dns-authorization-entry" {
 ```
 
 #### Some basic Load Balancer security
-GCP's rules can be pretty expressive so its certinly worth reading their docs, or clicking around their wizard for manually adding rules.
+GCP's rules can be pretty expressive so it is definitely worth reading their docs or clicking around their wizard for manually adding rules.
 
 Here I'd show some baseline rules, blocking countries and rate limiting.
 
@@ -514,7 +514,7 @@ resource "google_compute_security_policy" "default" {
 
 Next our country block. 
 Let's block Iran and North Korea. 
-To elaborate the example, you might not want to do business with sanctioned countries.
+To elaborate on the example, you might not want to do business with sanctioned countries.
 
 An additional consideration for the more paranoid is to track blocks that contain your auth header, A bad actor who is normally using a VPN might forget now and then.
 ```hcl
@@ -566,7 +566,7 @@ No need to setup something like a fluentd DeamonSet, GCP **automagicly** collect
 We just need to create a separate logging bucket and set up the logging sink (to that bucket).
 After that is complete you can just use GCP Log Explorer to inspect and query your logs.
 
-First, we will create a random `bucket_prefix` destroying s3 type buckets is not an action that is completed immediately. If you are testing things running `terraform apply` and `terraform destroy` more than once you can get name conflicts.
+First, we will create a random `bucket_prefix` destroying s3-type buckets is not an action that is completed immediately. If you are testing things running `terraform apply` and `terraform destroy` more than once you can get name conflicts.
 ```hcl
 resource "random_string" "bucket_prefix" {
   length  = 6
@@ -697,11 +697,11 @@ spec:
 
 ### Ingress
 In our example we are going to define a few resources in our [`ingress.yml`](https://github.com/dacbd/zero-to-prod-gke/blob/main/kubernetes/ingress.yml) these could easily be seperate but they are pretty tightly coupled and in our example pretty short.
-I'll go over these custom resources, but [when it doubt checkout the docs](https://cloud.google.com/kubernetes-engine/docs/how-to/ingress-configuration#overview)
+I'll go over these custom resources, but [when in doubt check the docs](https://cloud.google.com/kubernetes-engine/docs/how-to/ingress-configuration#overview).
 
 #### FrontendConfig
-`FrontendConfig` helps define the "entry point" to our load balancer, here we put the name of our SSL Policy we defined in terraform.
-We also add the entries so that we can redirect any http to https. It's pretty simple, enabled or not, and what type of redirect status we want to use.
+`FrontendConfig` helps define the "entry point" to our load balancer, here we put the name of our SSL Policy we defined in Terraform.
+We also add the entries so that we can redirect any HTTP to HTTPS. It's pretty simple, enabled or not, and what type of redirect status we want to use.
 
 NOTE: if you are discussing your infra with someone besure to establish context, a "Frontend Config" might mean something very different to a web dev.
 ```yml
@@ -718,7 +718,7 @@ spec:
 
 #### BackendConfig
 The `BackendConfig` can be thought of as a target group, where your load balancer routes requests. Here I have defined it in my ingress yaml, but likely you have a `BackendConfig` for every `Service` you have defined (assuming all of your services have routes that will get exposed).
-Our `BackendConfig` is also where we attach our security policy(LB level rate-limiting/blocking) we made in terraform.
+Our `BackendConfig` is also where we attach our security policy(LB level rate-limiting/blocking) we made in Terraform.
 For a more holistic example we have redefined the `healthCheck` by default it makes requests to `/` of the `Service` attached to the `BackendConfig`.
 The load balancer uses this to know which pods are healthy to route requests to.
 ```yml
@@ -754,8 +754,8 @@ spec:
 In our example, the [ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/) definition is what ties everything together. The [spec is pretty standard](https://kubernetes.io/docs/reference/kubernetes-api/service-resources/ingress-v1/) so we won't cover it.
 To walk through the annotations:
 1. `kubernetes.io/ingress.class` tells k8s which ingress we are going to use, as a counter-example you might see the value as `nginx`
-2. `kubernetes.io/ingress.global-static-ip-name` will attach our load balancer to the static IP we provisioned in terraform
-3. `networking.gke.io/managed-certificates` will attach our managed certificate so we can have proper/easy https for our LB
+2. `kubernetes.io/ingress.global-static-ip-name` will attach our load balancer to the static IP we provisioned in Terraform
+3. `networking.gke.io/managed-certificates` will attach our managed certificate so we can have proper/easy HTTPS for our LB
 4. `networking.gke.io/v1beta1.FrontendConfig` essentially defines the entry point for our LB which we [covered above](#FrontendConfig)
 ```yml
 apiVersion: networking.k8s.io/v1
@@ -807,7 +807,7 @@ Try not to leave things haftway applied.
 The biggest item I'll point out is that we provision a public static IP address to attach to the Load Balancer.
 Until you apply the k8s yaml this address is considered detached, and GCP will charge you extra [(x2)](https://cloud.google.com/vpc/network-pricing#ipaddress). In the grand scheme it's not that much, but worth noting for our penny pinchers.
 
-### Deleteing/Cleaning up resources
+### Deleting/Cleaning up resources
 
 Since some of the cloud infrastructure(the load balancer) is managed via Kubernetes resources, if you delete the cluster before deleting those resources, you will leave your account with resources that will need manual management.
 
