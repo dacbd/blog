@@ -279,18 +279,6 @@ resource "google_container_cluster" "primary" {
   location          = var.region
   datapath_provider = "ADVANCED_DATAPATH"
 
-  network         = "projects/${var.project_id}/global/networks/${module.prod-vpc.network_name}"
-  networking_mode = "VPC_NATIVE"
-  subnetwork      = "projects/${var.project_id}/regions/${var.region}/subnetworks/${local.subnet_names[index(module.prod-vpc.subnets_names, local.subnet_name)]}"
-  ip_allocation_policy {
-    cluster_secondary_range_name  = local.pods_range_name
-    services_secondary_range_name = local.svc_range_name
-    stack_type                    = "IPV4"
-    pod_cidr_overprovision_config {
-      disabled = false
-    }
-  }
-
   deletion_protection = false
   enable_autopilot    = true
 
@@ -301,6 +289,18 @@ resource "google_container_cluster" "primary" {
   enable_multi_networking                  = false
   enable_tpu                               = false
 
+  network         = "projects/${var.project_id}/global/networks/${module.prod-vpc.network_name}"
+  networking_mode = "VPC_NATIVE"
+  subnetwork      = "projects/${var.project_id}/regions/${var.region}/subnetworks/${local.subnet_names[index(module.prod-vpc.subnets_names, local.subnet_name)]}"
+
+  ip_allocation_policy {
+    cluster_secondary_range_name  = local.pods_range_name
+    services_secondary_range_name = local.svc_range_name
+    stack_type                    = "IPV4"
+    pod_cidr_overprovision_config {
+      disabled = false
+    }
+  }
 
   addons_config {
     gce_persistent_disk_csi_driver_config {
@@ -322,6 +322,7 @@ resource "google_container_cluster" "primary" {
       enabled = false
     }
   }
+
   binary_authorization {
     evaluation_mode = "DISABLED"
   }
@@ -352,14 +353,17 @@ resource "google_container_cluster" "primary" {
   default_snat_status {
     disabled = false
   }
+
   dns_config {
     cluster_dns        = "CLOUD_DNS"
     cluster_dns_domain = "cluster.local"
     cluster_dns_scope  = "CLUSTER_SCOPE"
   }
+
   gateway_api_config {
     channel = "CHANNEL_STANDARD"
   }
+
   logging_config {
     enable_components = [
       "SYSTEM_COMPONENTS",
@@ -379,10 +383,12 @@ resource "google_container_cluster" "primary" {
       "CADVISOR",
       "KUBELET",
     ]
+
     advanced_datapath_observability_config {
       enable_metrics = true
       enable_relay   = false
     }
+
     managed_prometheus {
       enabled = true
     }
@@ -392,21 +398,22 @@ resource "google_container_cluster" "primary" {
     node_config_defaults {
       insecure_kubelet_readonly_port_enabled = "FALSE"
       logging_variant                        = "DEFAULT"
+
       gcfs_config {
         enabled = true
       }
     }
   }
+
   private_cluster_config {
     enable_private_endpoint = false
     enable_private_nodes    = true
+
     master_global_access_config {
       enabled = false
     }
   }
-  release_channel {
-    channel = "REGULAR"
-  }
+
   secret_manager_config {
     enabled = false
   }
@@ -419,6 +426,10 @@ resource "google_container_cluster" "primary" {
   }
   workload_identity_config {
     workload_pool = "${var.project_id}.svc.id.goog"
+  }
+
+  release_channel {
+    channel = "REGULAR"
   }
 }
 ```
@@ -469,12 +480,15 @@ You can easily copy and paste these values into the records yourself, defining s
 output "k8s_ingress_lb_global_static_ip" {
   value = google_compute_global_address.static.name
 }
+
 output "dns_record_domain_name" {
   value = google_certificate_manager_dns_authorization.default.dns_resource_record.0.name
 }
+
 output "dns_record_type" {
   value = google_certificate_manager_dns_authorization.default.dns_resource_record.0.type
 }
+
 output "dns_record_value" {
   value = google_certificate_manager_dns_authorization.default.dns_resource_record.0.data
 }
@@ -489,6 +503,7 @@ resource "cloudflare_record" "load-balancer-entry" {
   type    = "A"
   ttl     = 1 # automatic
 }
+
 resource "cloudflare_record" "gcp-dns-authorization-entry" {
   zone_id = var.cloudflare_zone_id
   name    = google_certificate_manager_dns_authorization.default.dns_resource_record.0.name
@@ -522,6 +537,7 @@ resource "google_compute_security_policy_rule" "block_country" {
   security_policy = google_compute_security_policy.default.name
   priority        = "1000"
   action          = "deny(403)"
+
   match {
     expr {
       expression = "origin.region_code == \"IR\" || origin.region_code == \"KP\""
@@ -541,20 +557,23 @@ resource "google_compute_security_policy_rule" "rate_limit" {
   security_policy = google_compute_security_policy.default.name
   priority        = "2000"
   action          = "rate_based_ban"
+
   match {
     versioned_expr = "SRC_IPS_V1"
     config {
       src_ip_ranges = ["*"]
     }
   }
+
   rate_limit_options {
-    conform_action = "allow"
-    exceed_action  = "deny(429)"
+    ban_duration_sec = 3600 # ban for an hour
+    conform_action   = "allow"
+    exceed_action    = "deny(429)"
+
     rate_limit_threshold {
       count        = 120
       interval_sec = 60
     }
-    ban_duration_sec = 3600 # ban for an hour
   }
 }
 ```
@@ -594,9 +613,9 @@ resource "google_logging_project_sink" "k8s-sink" {
   destination = "logging.googleapis.com/projects/${var.project_id}/locations/${var.region}/buckets/${google_logging_project_bucket_config.k8s-logs.bucket_id}"
 
   filter = <<-EOF
-resource.type="k8s_container"
-logName=("projects/${var.project_id}/logs/stderr" OR "projects/${var.project_id}/logs/stdout")
-EOF
+    resource.type="k8s_container"
+    logName=("projects/${var.project_id}/logs/stderr" OR "projects/${var.project_id}/logs/stdout")
+  EOF
 
   exclusions {
     name   = "remove-kube-system"
