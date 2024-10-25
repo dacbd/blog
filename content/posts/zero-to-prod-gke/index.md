@@ -306,23 +306,18 @@ resource "google_container_cluster" "primary" {
     gce_persistent_disk_csi_driver_config {
       enabled = true
     }
-
     gcp_filestore_csi_driver_config {
       enabled = true
     }
-
     gcs_fuse_csi_driver_config {
       enabled = true
     }
-
     horizontal_pod_autoscaling {
       disabled = false
     }
-
     http_load_balancing {
       disabled = false
     }
-
     ray_operator_config {
       enabled = false
     }
@@ -419,25 +414,22 @@ resource "google_container_cluster" "primary" {
     }
   }
 
-  release_channel {
-    channel = "REGULAR"
-  }
-
   secret_manager_config {
     enabled = false
   }
-
   security_posture_config {
     mode               = "BASIC"
     vulnerability_mode = "VULNERABILITY_DISABLED"
   }
-
   vertical_pod_autoscaling {
     enabled = true
   }
-
   workload_identity_config {
     workload_pool = "${var.project_id}.svc.id.goog"
+  }
+
+  release_channel {
+    channel = "REGULAR"
   }
 }
 ```
