@@ -45,7 +45,7 @@ We aren't going in-depth on every detail and depending on your risk tolerance/se
 
 That said, I'm confident for 80% of projects this will get you all the way there, if not then at least 80% of the way.
 
-All of the code is available here: [https://github.com/dacbd/zero-to-prod-gke]()
+All of the code is available [here](https://github.com/dacbd/zero-to-prod-gke).
 
 ## Tech Choices
 I love automation and things that "just work" so, I have two __meta goals__ for our setup.
@@ -94,27 +94,6 @@ gcloud init
 gcloud components install gke-gcloud-auth-plugin
 ```
 
------
-
-Finally, if you are working in a new GCP project we need to make sure all the relevant APIs are enabled.
-
-For example:
-- Certificate Manager API `certificatemanager.googleapis.com`
-- Compute Engine API `compute.googleapis.com`
-- Kubernetes Engine API `container.googleapis.com`
-- Cloud DNS API `dns.googleapis.com`
-- Cloud Logging API `logging.googleapis.com`
-- Cloud Monitoring API `monitoring.googleapis.com`
-
-Most of the time you will see an error when you try to create a resource and haven't enabled it already, but there are a few cases where it's not clear.
-
-
-As an example, you can go through this whole tutorial and deployment, and have everything working but not be able to see any of your k8s container logs...
-Really strange right? You can configure all the logging resources, and even browse through other logs (ex: your load balancer) in the Log Explorer. All without actually enabling the logging API for your project. So if you don't see your logs in Log Explorer that's probably why.
-
-You can check what you have enabled with: `gcloud services list --enabled --project <your-project-name>`, there should be many more than are listed above.
-
-
 ## Terraform
 
 In the [git repo](https://github.com/dacbd/zero-to-prod-gke/tree/main/terraform) you can see the whole terraform setup together.
@@ -136,7 +115,7 @@ terraform {
 }
 
 provider "google" {
-  project = "zero-to-prod-gke"
+  project = var.project_id
   region  = "us-west1"
 }
 
@@ -152,6 +131,28 @@ If you have sensitive credentials, like `var.cloudflare_api_token` in the above 
 
 Terraform will look for environment variables with the prefix: `TF_VAR_` and set their values to your variables.
 Using our above example we can run `export TF_VAR_cloudflare_api_token=deadbeef`.
+
+
+If we are working in a brand new GCP project we will need to enable all the required servies:
+```hcl
+module "project-services" {
+  source  = "terraform-google-modules/project-factory/google//modules/project_services"
+  version = "~> 17.0"
+
+  project_id                  = var.project_id
+  disable_services_on_destroy = false
+
+  activate_apis = [
+    "compute.googleapis.com",
+    "iam.googleapis.com",
+    "logging.googleapis.com",
+    "container.googleapis.com",
+    "certificatemanager.googleapis.com",
+    "monitoring.googleapis.com",
+  ]
+}
+```
+If you get any `SERVICE_DISABLED` type error messages you may need to wait, enabling services in an ["eventually consistent"](https://registry.terraform.io/providers/hashicorp/google/latest/docs/guides/google_project_service#newly-activated-service-errors) process. [Module reference](https://github.com/terraform-google-modules/terraform-google-project-factory/tree/master/modules/project_services)
 
 ### Networking
 
