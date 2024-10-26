@@ -167,7 +167,7 @@ If you get it wrong, in the wrong way, it might mean taking down all of your ser
 So we are going to try and keep it simple.
 To help with security, we will keep our network private.
 For our app to call out to external services, we'll create a [Cloud Nat](https://cloud.google.com/nat/docs/overview).
-The only way traffic can get onto our network will be through the GCP load balancer. SO...
+The only way traffic can get onto our network will be through the GCP load balancer. *So*...
 
 **NO Public IPs in our Network!**
 

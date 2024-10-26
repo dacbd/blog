@@ -15,7 +15,7 @@ title = 'The dacbd Blog'
 subtitle = 'Technical Writings and Rants'
 socialIcons = [{ name = "github", url = "https://github.com/dacbd" }, { name = "linkedin", url = "https://www.linkedin.com/in/dacbd/" }]
 author = "Daniel Barnes"
-defaultTheme = "auto"
+defaultTheme = "dark"
 env = "production"
 mainSections = ["posts", "tags"]
 
@@ -47,7 +47,7 @@ email = 'dabarnes2b@gmail.com'
 Title = "Hello!"
 Content = """
 I'm Daniel Barnes, A software engineer who has done it all. I've always had a passion for programming and the internet.
-I got started in tech at a local IT security company, where I learned linux the hardway: with a backroom spare server, learned to close vi, then told to migrate some MySQL database to Postgres.
+I got started in tech at a local IT security company, where I learned Linux the hard way: given a backroom spare server, learned to close vi, then told to migrate some MySQL database to Postgres.
 
 ---
 I've been professionally writing code since 2011 when I was introduced to Nodejs on `v0.4.0` and I've been writing code ever since.
@@ -55,17 +55,9 @@ I've been professionally writing code since 2011 when I was introduced to Nodejs
 ---
 50% Backend -> 30% DevOps -> 20% Frontend -> 0% Designer
 
-"""
+Nodejs - Go - Rust - Python
 
-[params.profileMode]
-enabled = false # needs to be explicitly set
-title = "ExampleSite"
-subtitle = "This is subtitle"
-imageUrl = "<img location>"
-imageWidth = 120
-imageHeight = 120
-imageTitle = "my image"
-#buttons = [{ name = "Posts", url = "posts" }, { name = "Tags", url = "tags" }]
+"""
 
 [params.cover]
 hidden = true # hide everywhere but not in structured data
