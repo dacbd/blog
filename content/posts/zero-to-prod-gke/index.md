@@ -1,19 +1,18 @@
 ---
 title: 'Zero to Prod - GKE'
-date: 2024-10-07T21:07:42+09:00
+date: 2024-10-28
 # weight: 1
 tags: ["k8s", "GCP", "GKE", "terraform", "DevOps"]
 author: "Daniel Barnes"
 showToc: true
 TocOpen: false
-draft: true
+draft: false
 hidemeta: false
 comments: false
 description: "Go from nothing to a basic production deployment."
 canonicalURL: "https://blog.dacbd.dev/posts/zero-to-prod-gke/"
-disableHLJS: true # to disable highlightjs
-disableShare: false
 disableHLJS: false
+disableShare: false
 hideSummary: false
 searchHidden: true
 ShowReadingTime: true
@@ -179,7 +178,7 @@ If you get it wrong, in the wrong way, it might mean taking down all of your ser
 So we are going to try and keep it simple.
 To help with security, we will keep our network private.
 For our app to call out to external services, we'll create a [Cloud Nat](https://cloud.google.com/nat/docs/overview).
-The only way traffic can get onto our network will be through the GCP load balancer. SO...
+The only way traffic can get onto our network will be through the GCP load balancer. *So*...
 
 **NO Public IPs in our Network!**
 
