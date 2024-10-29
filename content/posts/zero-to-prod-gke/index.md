@@ -1,6 +1,6 @@
 ---
 title: 'Zero to Prod - GKE'
-date: 2024-10-25
+date: 2024-10-28
 # weight: 1
 tags: ["k8s", "GCP", "GKE", "terraform", "DevOps"]
 author: "Daniel Barnes"
