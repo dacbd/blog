@@ -122,7 +122,7 @@ terraform {
 
 provider "google" {
   project = var.project_id
-  region  = "us-west1"
+  region  = var.region
 }
 
 provider "cloudflare" {
@@ -130,13 +130,24 @@ provider "cloudflare" {
 }
 ```
 
-I'm using cloudflare for DNS but it's not required.
-Instead, you can copy-paste a few values to set your DNS record
-
 If you have sensitive credentials, like `var.cloudflare_api_token` in the above you can use an environment variable to set the value so you aren't putting it in a file that might end up in git. 
 
 Terraform will look for environment variables with the prefix: `TF_VAR_` and set their values to your variables.
 Using our above example we can run `export TF_VAR_cloudflare_api_token=deadbeef`.
+
+If the variable isn't sensitive, but might change still I would set a default value like so:
+```hcl
+variable "region" {
+  description = "The region infra will be deployed in."
+  type        = string
+  default     = "us-west1"
+}
+```
+This way its still configurable but you won't need to manage a long list of environment variables.
+
+
+I'm using cloudflare for DNS but it's not required.
+Instead, you can copy-paste a few values to set your DNS record
 
 
 If we are working in a brand new GCP project we will need to enable all the required services:
