@@ -1,4 +1,3 @@
-#baseURL = 'https://blog.dacbd.dev/'
 languageCode = 'en-us'
 theme = "PaperMod"
 
