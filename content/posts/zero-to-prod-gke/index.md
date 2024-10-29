@@ -146,8 +146,8 @@ variable "region" {
 This way its still configurable but you won't need to manage a long list of environment variables.
 
 
-I'm using cloudflare for DNS but it's not required.
-Instead, you can copy-paste a few values to set your DNS record
+You can set your DNS records however you wish, I'm using cloudflare and it's terraform provider for DNS but it's not required.
+Instead, you can copy-paste a few values to set your DNS records. (see the [git repo outputs for what to c/p](https://github.com/dacbd/zero-to-prod-gke/blob/main/terraform/output.tf))
 
 
 If we are working in a brand new GCP project we will need to enable all the required services:
