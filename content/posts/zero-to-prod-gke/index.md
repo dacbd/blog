@@ -182,7 +182,7 @@ The only way traffic can get onto our network will be through the GCP load balan
 
 **NO Public IPs in our Network!**
 
-Note that you can still get a shell on a k8s pod through the control plane, the ultra paranoid will set up a VPN on the network and configure the controal plane to only be accesible through the private network. I plan to write about that at some point...
+Note that you can still get a shell on a k8s pod through the control plane, the ultra paranoid will set up a VPN on the network and configure the control plane to only be accesible through the private network. I plan to write about that at some point...
 
 On the Cloud Providers I use the most (AWS/GCP) setting up a network can be a bit tedious if you do it by hand, so I recommend using a premade terraform module to handle it: [AWS](https://github.com/terraform-aws-modules/terraform-aws-vpc)/[GCP](https://github.com/terraform-google-modules/terraform-google-network).
 
