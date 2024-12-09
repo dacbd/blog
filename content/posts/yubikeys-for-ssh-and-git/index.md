@@ -36,7 +36,19 @@ editPost:
 ---
 
 
-## Intro
+## Why yubikey
+
+Why should you use a yubikey or any hardware security device to secure your ssh keys?
+
+TLDR for me, there are two main reasons. Simple security and convenience.
+
+Many software package managers like [npm and pip](https://www.google.com/search?q=pip+malware+stealing+ssh+keys) have been used in attacks, which target users ssh keys.
+Using a yubikey there isn't a ssh key to steal, to me this is just simple security.
+
+Convenience?! Yes, with a modern Macbook a USB-C Nano yubikey is a natural companion. Do you have your ssh keys setup in [AWS](), on servers running your hobby project, or on GitHub/Gitlab? Did you get a new work computer? Have an older mac you still use?
+Now there is no need to setup a key per machine, you can securely have one you use everywhere. Just unplug from one and plug back into your next. Or if you want, setup one key a load it onto multiple yubikeys. You can securely setup your key once and not worry about updating it in all the places you might ssh to.
+
+
 
 ## Setting up your machine
 
@@ -49,7 +61,7 @@ brew install wget \
     pinentry-mac
 ```
 
-Setup your `gpg.conf` / `gpg-agent.conf` [covered below]()
+Setup your `gpg.conf` / `gpg-agent.conf` [covered below](#preparing-for-ssh)
 You can see the lastest settings I use in my [dotfiles.](https://github.com/dacbd/dotfiles/tree/main/.gnupg)
 Now on your new computer download your existing(public) keys, ex: `wget https://github.com/dacbd.gpg`
 Import them: `gpg --import dacbd.gpg`
