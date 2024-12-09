@@ -9,7 +9,7 @@ TocOpen: false
 draft: true
 hidemeta: false
 comments: false
-description: "How I setup a yubikey for ssh & git code signing"
+description: "How to setup your yubikey for ssh & git signing"
 canonicalURL: "https://canonical.url/to/page"
 disableHLJS: true # to disable highlightjs
 disableShare: false
@@ -38,12 +38,36 @@ editPost:
 
 ## Intro
 
+## Setting up your machine
+
+If you have an old yubikey setup already, or you have a new computer its pretty easy to get things working again.
+
+Pretty simply you can just run the following:
+```bash
+brew install wget \
+    gnupg \
+    pinentry-mac
+```
+
+Setup your `gpg.conf` / `gpg-agent.conf` [covered below]()
+You can see the lastest settings I use in my [dotfiles.](https://github.com/dacbd/dotfiles/tree/main/.gnupg)
+Now on your new computer download your existing(public) keys, ex: `wget https://github.com/dacbd.gpg`
+Import them: `gpg --import dacbd.gpg`
+
+Optionally make sure everything is fine:
+```
+gpg -k
+gpg --card-status
+```
+
+And that's it, your new computer is ready to go with your yubikey!
 
 ## New Yubikey Setup
 
 ## Preparing for SSH
 
 ## Setup for Git Signing
+
 
 yubikey
 
